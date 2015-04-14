@@ -4,21 +4,21 @@ window.onload = function(){
 
 	//===core===
 	var core = new Core(320 , 320);
-	core.preload('chara1.png');
-	core.preload('icon1.png');
+	//core.preload('chara1.png');
+	//core.preload('icon1.png');
 	core.fps = 15;
 	
 	//===grobal var===
 	var score = 0;
 	var timeLeft = 5 * core.fps;
 	var gravity = 100;
-	var selectedTerrain_No = 1;
+	var selectedTerrain_No = 0;
 	
 	var physical_obj = [];
 	var terrain_obj = [];
 	
 	core.onload = function(){
-		
+		 
 		
 
 		/*tenplete of Class
@@ -60,8 +60,16 @@ window.onload = function(){
 				this.context.fillStyle = this.color;
 				this.context.fillRect(0,0,this.width,this.height);
 			},
+			drawLine: function(begin_x,begin_y,end_x,end_y,color){
+				this.context.beginPath();
+				this.context.moveTo(begin_x,begin_y);
+				this.context.lineTo(end_x,end_y);
+				this.context.strokeStyle = color;
+				this.context.closePath();
+				this.context.stroke();
+			},
 		});
-			
+		
 
 
 		var Sprite2 = Class.create(Sprite, {
@@ -95,6 +103,12 @@ window.onload = function(){
 				var tan = Y/X;
 				var deg = Math.atan(tan)/(Math.PI/180);
 				return Math.round(deg);
+			},
+			getCenter:function(){
+				var center_x = this.x + this.width/2;
+				var center_y = this.y + this.height/2;
+				var center_array = [center_x,center_y];
+				return center_array;
 			},
 		});
 		
@@ -155,7 +169,7 @@ window.onload = function(){
 
 		var Liquid = Class.create(Physical,{
 			initialize:function(quantity){
-				var width = quantitiy*
+				var width = quantitiy*1;
 				Physical.call(this,width,height);
 			}
 		});
@@ -250,14 +264,179 @@ window.onload = function(){
 
 
 
-		var MovingTerrain = Class.create(Terrain,{
+		var gimicTerrain = Class.create(Terrain,{
 			initialize:function(x,y,width,height){
 				//call super constructor
 				Terrain.call(this,x,y,width,height);
+				this.power = -1;
+				//event hundler
+				this.on('enterframe',function(){
+					if(this.power>0){
+						this.running();
+					}
+				});
+			},
+			powerOn:function(){
+				if(this.power<0){
+					this.powerOn_event();
+					this.power = 1;
+				}
+			},
+
+			powerOff:function(){
+				if(this.power>0){
+					this.powerOff_event();
+					this.power = -1;
+				}
+			},
+
+			powerOn_event:function(){
+			},
+
+			powerOff_event:function(){
+			},
+			
+			running:function(){
+			},
+		});
+
+
+
+		var Trapdoor = Class.create(gimicTerrain,{
+			//“dŒ¹ƒIƒ“‚Å°‚ªÁ‚¦‚é—Ž‚Æ‚µŒŠ
+			initialize:function(x,y){
+				gimicTerrain.call(this,x,y,32*2,32/2);
+				this.image.changeColor('purple');
+				this.disappear = -1;
+				core.rootScene.addChild(this);
+			},
+			powerOn_event:function(){
+				this.disappear*=-1;
+				if(this.disappear>0){	
+					this.opacity = 0.5;
+					this.touchEnabled = false;
+				}else{
+					this.opacity = 1;
+					this.touchEnabled = true;
+				}
+			},
+		});
+
+
+/*
+		var Elevator = Class.create(gimicTerrain, {
+			//constructor
+			initialize:function(x,y){
+				console.log('I am Elevator');
+				//call super constructor
+				gimicTerrain.call(this,x,y);
+				//field
+				this.image.color = 'orange';
+				this.v_x = 0;
+				this.v_y = 0;
+				//event hundler
+				core.rootScene.addChild(this);
+			},
+			//methods
+			slide:function(after_x,after_y,speed){
+				var a = after_x + after_y;
+				if(this.x != after_x&&this.y != after_y){
+					this.v_x = speed * (after_x-this.x)/a;
+					this.v_y = speed * (after_y-this.y)/a;
+				}
+			},
+			running:function(){
+				this.x += this.v_x / core.fps;
+				this.y += this.v_y / core.fps;
 			}
 		});
-				
+*/
+
 		
+		var Sensor = Class.create(Sprite2,{
+			initialize:function(x,y){
+				Sprite2.call(this,16,16);
+				this.x = x;
+				this.y = y;
+				this.image.changeColor('red');
+				this.capture = -1;
+				this.wires = [];
+				this.on('enterframe',function(){
+					this.search();
+					this.send(this.capture);
+				});
+				
+				core.rootScene.addChild(this);
+			},
+			
+			search:function(){
+				for(var i=0;i<physical_obj.length;i++){
+					if(this.intersect(physical_obj[i])){
+						this.capture = 1;	
+						this.image.drawEdge('yellow');
+						return;
+					}
+					this.capture = -1;
+					this.image.drawEdge('black');
+				}
+			},
+			connectWire:function(dist){
+				//console.log('generate new wire...');
+				var wire = new Wire(this,dist);
+				//console.log('sensor:wire connected');
+				this.wires.push(wire);
+			},
+				
+			send:function(value){
+				//console.log('sensor: send ' + value);
+				for(var i=0;i<this.wires.length;i++){
+					var wire = this.wires[i];
+					wire.transmit(value);
+				}
+			},
+		});
+
+
+
+		var Wire = Class.create(Sprite2,{
+			
+			initialize:function(source,dist){
+				//console.log('wire: initialized');
+				this.dist = dist;
+				this.source = source;
+				this.source_x = source.getCenter()[0];
+				this.source_y = source.getCenter()[1];
+				this.dist_x = dist.getCenter()[0];
+				this.dist_y = dist.getCenter()[1];
+				Sprite2.call(this,
+							 this.dist_x-this.source_x,
+							 this.dist_y-this.source_y);
+				this.x = this.source_x;
+				this.y = this.source_y;
+				this.drawWire('black');
+				core.rootScene.addChild(this);
+			},
+			transmit:function(value){
+				//console.log('wire: transmit');
+				if(value>0){
+					this.drawWire('yellow');
+					this.dist.powerOn();
+				}else{
+					this.drawWire('black');
+					this.dist.powerOff();
+				}
+			},
+			drawWire:function(color){
+				this.image.drawLine(
+					0,0,
+					this.width,this.height,
+					color);
+				//this.image.drawEdge('color');
+				console.log('draw wire');
+			},
+		});
+
+
 		
 		var Player = Class.create(Physical, {
 			//constructor
@@ -347,31 +526,8 @@ window.onload = function(){
 			conflict_upper:function(obj){
 				console.log('conveyor:conflict to object on UPPER aspect');
 				obj.v_y = 0;
-				obj.v_x = speed;
+				obj.v_x = this.speed;
 			},
-		});
-
-
-
-		var Elevator = Class.create(Floor, {
-			//constructor
-			initialize:function(x,y){
-				console.log('I am Elevator');
-				//call super constructor
-				Floor.call(this,x,y);
-				//field
-				//this.image = core.assets['icon1.png'];
-				this.image.color = 'orange';
-				//event hundler
-				core.rootScene.addChild(this);
-			},
-			//methods
-			conflict_upper:function(obj){
-				console.log('Elevator:conflict to object on UPPER aspect');
-				obj.v_y = 0;
-				obj.v_x = 10;
-			},
-			
 		});
 		
 		
@@ -381,6 +537,9 @@ window.onload = function(){
 		var player = new Player(32*3,32);
 		
 		physical_obj[0] = player;
+		physical_obj[1] = new Player(32*3,-100);
+		physical_obj[2] = new Player(32*3,-200);
+		
 			
 		var scoreLabel = new Label('Score: 0');
 		scoreLabel.x = 200;
@@ -407,46 +566,71 @@ window.onload = function(){
 		
 		//===Other===
 		//keybind
-		core.keybind( '1'.charCodeAt(0), 'key_1' );
-		core.keybind( '2'.charCodeAt(0), 'key_2' );
-		core.keybind( '3'.charCodeAt(0), 'key_3' );
+		//core.keybind( '1'.charCodeAt(0), 'key_1' );
+		//core.keybind( '2'.charCodeAt(0), 'key_2' );
+		//core.keybind( '3'.charCodeAt(0), 'key_3' );
+		core.keybind( '1'.charCodeAt(0), 'decrece' );
+		core.keybind( '2'.charCodeAt(0), 'increce' );
 		
 		//core&rootScene setup
+		var terrainNameList = [
+			'Floor',
+			'Trampoline',
+			'Conveyor',
+			'Trapdoor',
+			'Sensor'
+		];
+		core.addEventListener('increce'+'buttondown',function(){
+			selectedTerrain_No++;
+		});
+		core.addEventListener('decrece'+'buttondown',function(){
+			selectedTerrain_No--;
+		});
 		core.on('enterframe', function(){
-		
+		/*
 			if(core.input.key_1){
 				selectedTerrain_No = 1;
-				testLabel.text = 'Floor';
 			}else if(core.input.key_2){
 				selectedTerrain_No = 2;
-				testLabel.text = 'Trampoline';
 			}else if(core.input.key_3){
 				selectedTerrain_No = 3;
-				testLabel.text = 'Conveyor';
-			}
-			
+				}*/
+
+			testLabel.text = selectedTerrain_No;
+			testLabel2.text = terrainNameList[selectedTerrain_No];
 		});
 		
 		core.rootScene.on('touchstart',function(e){
 			switch(selectedTerrain_No){
-				case 1:
+			case 0:
 				puttingTerrain = new Floor(e.x,e.y);
 				break;
 				
-				case 2:
+			case 1:
 				puttingTerrain = new Trampoline(e.x,e.y);
 				break;
 				
-				case 3:
+			case 2:
 				puttingTerrain = new Conveyor(e.x,e.y);
 				break;
+
+			case 3:
+				puttingTerrain = new Trapdoor(e.x,e.y);
+				break;
+
+			case 4:
+				puttingTerrain = new Sensor(e.x,e.y);
+				break;
 				
-				default:
+			default:
 				puttingTerrain = new Floor(e.x,e.y);
 				break;
 			}
 			terrain_obj.push(puttingTerrain);
 		});
+		var td = new Trapdoor(200,100);
+		var sens = new Sensor(100,50);
+		sens.connectWire(td);
 	}
 	
 	core.start();
