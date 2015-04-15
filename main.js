@@ -3,7 +3,7 @@ enchant();
 window.onload = function(){
 
 	//===core===
-	var core = new Core(320 , 320);
+	var core = new Core(320*2 , 320);
 	//core.preload('chara1.png');
 	//core.preload('icon1.png');
 	core.fps = 15;
@@ -532,7 +532,21 @@ window.onload = function(){
 		
 		
 
-		
+		//===scenes===
+		var scene_title = new Scene();
+		var titleLabel = new Label('‚½‚¢‚Æ‚é!!!');
+		titleLabel.x = core.width/2-titleLabel.width/2;
+		titleLabel.y = core.height/2-titleLabel.height/2;
+		scene_title.addChild(titleLabel);
+
+
+
+		var scene_stageselect = new Scene();
+		var scene_stage = new Scene();
+		var scene_result = new Scene();
+
+
+
 		//===objects===
 		var player = new Player(32*3,32);
 		
@@ -631,6 +645,9 @@ window.onload = function(){
 		var td = new Trapdoor(200,100);
 		var sens = new Sensor(100,50);
 		sens.connectWire(td);
+
+
+
 	}
 	
 	core.start();
