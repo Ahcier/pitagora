@@ -30,10 +30,11 @@ window.onload = function(){
 		//==========scenes==========
 
 
+		core.pushScene(scene_title);
 
+		
 		//=====タイトルシーン=====
 		var scene_title = new Scene_title();
-		core.pushScene(scene_title);
 		scene_title.addEventListener('touchstart',function(){
 			core.pushScene(scene_stageselect);
 		});
@@ -41,40 +42,15 @@ window.onload = function(){
 
 		//=====ステージ選択シーン=====
 		var scene_stageselect = new Scene();
-
-		button_stage1.on('touchstart',function(){
-			resetStageData();
-			loadStageData(stageData1);
-			core.removeScene(scene_stageselect);
-			core.pushScene(scene_stage);
+		scene_stageselect.addEventListener('touchstart',function(){
+			core.pushScene(scene_stageselect);
 		});
-
-		//背景　
-		scene_stageselect.backgroundColor = 'yellow';
-
-		//位置調整
-		label_stageselect.x = W/2 - label_stageselect.width/2;
-		label_stageselect.y = H/10;
-
-		//パーツ追加
-		scene_stageselect.addChild(label_stageselect);
-
 
 
 		//=====ステージシーン=====
-		var scene_stage = new Scene();
+		var scene_stage = new Scene_stage();
 
-		//位置調整
-		testLabel.x = 10;
-		testLabel.y = 300;
-		
-		testLabel2.x = 100;
-		testLabel2.y = 300;
-
-		//イベントハンドラ追加
-		scene_stage.on('touchstart',stageEL(e));
-
-		//キーバインド,keybind
+		//キーバインド
 		scene_stage.keybind( '1'.charCodeAt(0), 'decrece' );
 		scene_stage.keybind( '2'.charCodeAt(0), 'increce' );
 
@@ -89,10 +65,6 @@ window.onload = function(){
 			testLabel2.text = terrainNameList[selectedTerrain_No];
 		});
 
-
-		//パーツ追加
-		scene_stage.addChild(testLabel);
-		scene_stage.addChild(testLabel2);
 
 		//stageシーンを動的に生成したい
 		//共通のパーツ以外はstages.jsから持ってきたデータを読み込んで配置する？
@@ -140,11 +112,6 @@ window.onload = function(){
 */
 
 		//===scenes add===
-
-		core.rootScene.addEventListener('touchstart',function(){
-			console.log('rootScene have been clicked');
-			core.pushScene(scene_title);
-		});
 		
 	};
 

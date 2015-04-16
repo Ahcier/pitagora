@@ -72,6 +72,7 @@ var Scene_stage = Class.create(Scene,{
 
 		//イベントハンドラ
 		this.on('touchstart',this.touchEL(e));
+
 		//パーツ追加
 		this.addChild(this.testLabel);
 		this.addChild(this.testLabel2);
@@ -104,15 +105,15 @@ var Scene_stage = Class.create(Scene,{
 		this.wire_obj = [];
 
 		for(var i=0;i<this.physical_obj.length;i++){
-			this.removeChild(physical_obj[i]);
+			this.removeChild(this.physical_obj[i]);
 		}
 
 		for(var j=0;j<this.terrain_obj.length;j++){
-			this.removeChild(terrain_obj[j]);
+			this.removeChild(this.terrain_obj[j]);
 		}
 
 		for(var l=0;l<this.wire_obj.length;l++){
-			this.removeChild(wire_obj[l]);
+			this.removeChild(this.wire_obj[l]);
 		}
 
 		//加えて、その他もろもろリセット

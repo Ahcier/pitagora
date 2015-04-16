@@ -1,5 +1,7 @@
 enchant();
 
+
+
 var Surface0 = Class.create(Surface,{
 	//constructor
 	initialize:function(sprite){
@@ -117,7 +119,7 @@ var Physical = Class.create(Sprite2, {
 	rebound: function(){
 		if(this.v_y>0) this.v_y *= -this.val_rebound;
 	},
-	physicalState: function(){
+	physical: function(){
 		console.log('x: '+ this.x);
 		console.log('y: '+ this.y);
 		console.log('v_x: '+ this.v_x);
