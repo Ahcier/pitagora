@@ -20,6 +20,7 @@ var Stage = function(){
 	//構成パーツの保持
 	this.physical_obj = [];
 	this.terrain_obj = [];
+	this.sensor_obj = [];
 	this.wire_obj = [];
 
 	//プレイヤーが使用可能なパーツの個数
@@ -28,7 +29,10 @@ var Stage = function(){
 		this.trampoline = 0;
 		this.conveyor = 0;
 		this.trapdoor = 0;
+
 		this.sensor = 0;
+
+		this.wire = 0;
 	};
 	
 	//やってくるブロックの情報
@@ -88,7 +92,6 @@ var Sprite2 = Class.create(Sprite, {
 		//field
 		this.color = 'white';
 		this.image = new Surface0(this);
-		this.stage = new Stage();
 		this.preset = -1;
 		//event hundler
 	},
@@ -99,18 +102,40 @@ var Sprite2 = Class.create(Sprite, {
 		var center_array = [center_x,center_y];
 		return center_array;
 	},
-	
-	add2stage: function(stage){
+
+});
+
+
+
+var Stage_parts = Class.create(Sprite2, {
+	/*
+	  Stageに追加されるパーツ
+	 */
+	//constructor
+	initialize:function(width,height){
+		//call super constructor
+		Sprite2.call(this,width,height);
+		//field
+
+		this.stage = null;
+
+		//event hundler
+	},
+
+	//methods
+	addto: function(stage){
+		//上書きして使用
+		//Stageの適切な配列に追加するように処理
 	},
 
 });
 
 
 
-var Physical = Class.create(Sprite2, {
+var Physical = Class.create(Stage_parts, {
 	initialize: function(x,y,width,height){
 		//call super constructor
-		Sprite2.call(this,width,height);
+		Stage_parts.call(this,width,height);
 		//constructor
 		this.image.changeColor('yellow');
 		this.image.drawEdge('orange');
@@ -155,19 +180,20 @@ var Physical = Class.create(Sprite2, {
 		console.log('a_x: '+ this.a_x);
 		console.log('a_y: '+ this.a_y);
 	},
-	add2stage: function(stage){
+	addto: function(stage){
 		if(stage.physical_obj == null)throw new Error('引数がStageクラスではありません');
 		stage.physical_obj.push(this);
+		this.stage = stage;
 	},
 });
 
 
 
-var Terrain = Class.create(Sprite2, {
+var Terrain = Class.create(Stage_parts, {
 	//constructor
 	initialize: function(x,y,width,height){
 		//call super constructor
-		Sprite2.call(this,width,height);
+		Stage_parts.call(this,width,height);
 		//field
 		this.x = x;
 		this.y = y;
@@ -247,18 +273,19 @@ var Terrain = Class.create(Sprite2, {
 	},
 	terrainState: function(){
 	},
-	add2stage: function(stage){
+	addto: function(stage){
 		if(stage.terrain_obj == null)throw new Error('引数がStageクラスではありません');
 		stage.terrain_obj.push(this);
+		this.stage = stage;
 	},
 });
 
 
 
 var gimicTerrain = Class.create(Terrain,{
-	initialize:function(x,y,width,height){
+	initialize:function(x,y,width,height,stage){
 		//call super constructor
-		Terrain.call(this,x,y,width,height);
+		Terrain.call(this,x,y,width,height,stage);
 		this.power = -1;
 		//event hundler
 		this.on('enterframe',function(){
@@ -315,9 +342,9 @@ var Trapdoor = Class.create(gimicTerrain,{
 
 
 
-var Sensor = Class.create(Sprite2,{
+var Sensor = Class.create(Stage_parts,{
 	initialize:function(x,y){
-		Sprite2.call(this,16,16);
+		Stage_parts.call(this,16,16);
 		this.x = x;
 		this.y = y;
 		this.image.changeColor('red');
@@ -358,27 +385,30 @@ var Sensor = Class.create(Sprite2,{
 			wire.transmit(value);
 		}
 	},
-	add2stage: function(stage){
-		if(stage.terrain_obj == null)throw new Error('引数がStageクラスではありません');
-		stage.terrain_obj.push(this);
+	addto: function(stage){
+		if(stage.sensor_obj == null)throw new Error('引数がStageクラスではありません');
+		stage.sensor_obj.push(this);
+		this.stage = stage;
 	},
 });
 
 
 
-var Wire = Class.create(Sprite2,{
+var Wire = Class.create(Stage_parts,{
 	
 	initialize:function(source,dist){
 		//console.log('wire: initialized');
+
 		this.dist = dist;
 		this.source = source;
 		this.source_x = source.getCenter()[0];
 		this.source_y = source.getCenter()[1];
 		this.dist_x = dist.getCenter()[0];
 		this.dist_y = dist.getCenter()[1];
-		Sprite2.call(this,
-					 this.dist_x-this.source_x,
-					 this.dist_y-this.source_y);
+		Stage_parts.call(this,
+						 this.dist_x-this.source_x,
+						 this.dist_y-this.source_y,
+						 stage);
 		this.x = this.source_x;
 		this.y = this.source_y;
 		this.drawWire('black');
@@ -402,8 +432,9 @@ var Wire = Class.create(Sprite2,{
 		//this.image.drawEdge('color');
 		console.log('draw wire');
 	},
-	add2stage: function(stage){
-		if(stage.wire_obj == null)throw new Error('引数がStageクラスではありません');
+	addto: function(stage){
+		if(this.stage.wire_obj == null)throw new Error('引数がStageクラスではありません');
+		this.stage = stage;
 		stage.wire_obj.push(this);
 	},
 });
@@ -502,74 +533,9 @@ var Conveyor = Class.create(Floor, {
 	},
 });
 
-//********************StageUI********************
-/*
-  -ゲームを補助するUI
-  -Sprite
-  -ブロックの追加,移動,削除ができるようにしたい
-  -ステージにパーツを配置するために使用
-  -必要な個数だけ、クラスを作る
-  -StageUI_managerで提供
-*/
-
-
-
-var UI_button = Class.create(Sprite2,{
-	initialize:function(scene,W,H){
-		Sprite2.call(this,W,H);
-		this.image.changeColor('red');
-
-		this.scene = scene;
-
-		this.label = new Label();
-		this.label.x = this.x;
-		this.label.y = this.y;
-
-		this.on('touchstart',function(){
-			this.pushed();
-		});
-		this.scene.addChild(this);
-		this.scene.addChild(this.label);
-	},
-	pushed:function(){
-		console.log('UI_button:I have pushed');
-	},
-});
-
-
-
-var Toolbox = Class.create(Sprite2,{
-	initialize:function(scene){
-		Sprite2.call(this,scene.width*1/4,scene.height);
-		this.image.image.changeColor('green');
-		this.selected_No = 0; 
-		this.nameList = [
-			'Floor',
-			'Trampoline',
-			'Conveyor',
-			'Trapdoor',
-			'Sensor'
-		];
-
-		this.buttons = [];
-		var pre_y = this.y;
-		var space = this.height/20;
-		for(var i=0;i<this.buttons.length;i++){
-			var button = new UI_button(this.width*8/10,this.height*1/10);
-			button.x = this.x+this.width*1/10;
-			button.y = pre_y + space;
-			pre_y = button.y;
-			var label = new Label(this.nameList[i]);
-			this.buttons.push(button);
-		}
-	},
-});
 
 
 
 
 
-//********************Scene_stage********************
-/*
-  -実際にゲームを表示する
-*/
+
