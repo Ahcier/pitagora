@@ -12,7 +12,8 @@ enchant();
 
 
 
-var Stage = function(){
+function Stage(){
+
 	
 	//ゲーム用変数
 	this.gravity = 100;
@@ -23,7 +24,7 @@ var Stage = function(){
 	this.sensor_obj = [];
 	this.wire_obj = [];
 
-	//プレイヤーが使用可能なパーツの個数
+	 //プレイヤーが使用可能なパーツの個数
 	this.obj_limit = function(){
 		this.floor = 0;
 		this.trampoline = 0;
@@ -36,12 +37,46 @@ var Stage = function(){
 	};
 	
 	//やってくるブロックの情報
+	//Startpointsクラスのオブジェクトを格納
+	this.startpoints = [];
 
 	//種類,間隔,位置
 };
 
 
 
+/*
+
+var Stage = function(){
+};
+
+//ゲーム用変数
+Stage.prototype.gravity = 100;
+
+//構成パーツの保持
+Stage.prototype.physical_obj = [];
+Stage.prototype.terrain_obj = [];
+Stage.prototype.sensor_obj = [];
+Stage.prototype.wire_obj = [];
+
+*/
+
+/*
+
+var Stage = Class.create(Sprite,{
+	initialize:function(){
+		//ゲーム用変数
+		this.gravity = 100;
+
+		//構成パーツの保持
+		this.physical_obj = [];
+		this.terrain_obj = [];
+		this.sensor_obj = [];
+		this.wire_obj = [];
+	},
+});
+
+*/
 
 
 //********************object********************
@@ -118,16 +153,20 @@ var Stage_parts = Class.create(Sprite2, {
 		//field
 
 		this.stage = null;
+		this.index = null;
 
 		//event hundler
 	},
 
 	//methods
-	addto: function(stage){
+	addto: function(Stage){
 		//上書きして使用
 		//Stageの適切な配列に追加するように処理
+		this.stage = Stage;
 	},
-
+	removefrom: function(stage){
+		this.stage = stage;
+	},
 });
 
 
@@ -143,7 +182,7 @@ var Physical = Class.create(Stage_parts, {
 		this.v_x = 0;
 		this.v_y = 0;
 		this.a_x = 0;
-		this.a_y = 0 + gravity;
+		this.a_y = 0 + 100.0;//this.stage.gravity;
 		this.pre_x = x;
 		this.pre_y = y;
 		this.x = x;
@@ -156,10 +195,10 @@ var Physical = Class.create(Stage_parts, {
 		this.on('enterframe',function(){
 			this.pre_x = this.x;
 			this.pre_y = this.y;
-			this.v_x += this.a_x/core.fps; 
-			this.v_y += this.a_y/core.fps; 
-			this.x += this.v_x/core.fps; 
-			this.y += this.v_y/core.fps; 
+			this.v_x += this.a_x/15;//core.fps; 
+			this.v_y += this.a_y/15;///core.fps;
+			this.x += this.v_x/15;//core.fps; 
+			this.y += this.v_y/15;//core.fps; 
 		});
 	},
 	//methods
@@ -172,7 +211,7 @@ var Physical = Class.create(Stage_parts, {
 	rebound: function(){
 		if(this.v_y>0) this.v_y *= -this.val_rebound;
 	},
-	physical: function(){
+	state: function(){
 		console.log('x: '+ this.x);
 		console.log('y: '+ this.y);
 		console.log('v_x: '+ this.v_x);
@@ -183,8 +222,12 @@ var Physical = Class.create(Stage_parts, {
 	addto: function(stage){
 		if(stage.physical_obj == null)throw new Error('引数がStageクラスではありません');
 		stage.physical_obj.push(this);
+		this.index = stage.physical_obj.length-1;
 		this.stage = stage;
 	},
+	removefrom: function(stage){
+		stage.physical_obj.splice(this.index);
+	}
 });
 
 
@@ -273,10 +316,13 @@ var Terrain = Class.create(Stage_parts, {
 	},
 	terrainState: function(){
 	},
-	addto: function(stage){
-		if(stage.terrain_obj == null)throw new Error('引数がStageクラスではありません');
-		stage.terrain_obj.push(this);
-		this.stage = stage;
+	addto: function(Stage){
+		this.stage = Stage;
+		Stage.terrain_obj.push(this);
+		this.index = Stage.terrain_obj.length-1;
+	},
+	removefrom:function(stage){
+		stage.terrain_obj.splice(this.index);
 	},
 });
 
@@ -359,6 +405,7 @@ var Sensor = Class.create(Stage_parts,{
 	},
 	
 	search:function(){
+		var physical_obj = this.stage.physical_obj;
 		for(var i=0;i<physical_obj.length;i++){
 			if(this.intersect(physical_obj[i])){
 				this.capture = 1;	
@@ -387,8 +434,12 @@ var Sensor = Class.create(Stage_parts,{
 	},
 	addto: function(stage){
 		if(stage.sensor_obj == null)throw new Error('引数がStageクラスではありません');
-		stage.sensor_obj.push(this);
 		this.stage = stage;
+		stage.sensor_obj.push(this);
+		this.index = stage.sensor_obj.length-1;
+	},
+	removefrom:function(stage){
+		stage.sensor_obj.splice(this.index);
 	},
 });
 
@@ -436,6 +487,10 @@ var Wire = Class.create(Stage_parts,{
 		if(this.stage.wire_obj == null)throw new Error('引数がStageクラスではありません');
 		this.stage = stage;
 		stage.wire_obj.push(this);
+		this.index = stage.wire_obj.length-1;
+	},
+	removefrom:function(stage){
+		stage.wire_obj.splice(this.index);
 	},
 });
 
@@ -454,9 +509,9 @@ var Player = Class.create(Physical, {
 		this.junping = 0;
 		//event hundler
 		this.on('enterframe',function(){
-			if(core.input.up){
-				this.junp();
-			};
+			//if(core.input.up){
+			//	this.junp();
+			//};
 		});
 		
 	},
@@ -473,11 +528,69 @@ var Player = Class.create(Physical, {
 
 
 
+var Product = Class.create(Physical, {
+	initialize:function(x,y,type){
+		Physical.call(this,x,y,32,32);
+		this.image.changeColor('orange');
+		this.image.drawEdge('black');
+		this.val_rebound = 0.1;
+		this.type = type;
+	},
+	goal:function(goal){
+		if(goal.type==this.type) console.log('やったぜ');
+		else console.log('ダメみたいですね');
+	},
+});
+
+
+
+var Startpoint = Class.create(Stage_parts,{
+	initialize:function(x,y,span_sec){
+		Stage_parts.call(this,32*2,32);
+		this.x = x;
+		this.y = y;
+		this.fps = 15;
+		this.image.changeColor('white');
+		this.image.drawEdge('black');
+		this.span_frame = span_sec * this.fps;
+
+		this.products_type = ['x','xc','xs','xa','x','xbb','xew','x','xg','xp'];
+		this.pointer = 0;
+	},
+	run:function(scene){
+		var typelist = this.products_type;
+		this.on('enterframe',function(){
+			if(this.pointer<this.products_type.length){
+				if(this.age%this.span_frame==0){						
+					console.log('ブロックを作ったつもり : '+this.age);
+					scene.make_product(this.x,this.y
+									   ,typelist[this.pointer]);
+					this.pointer++;
+				}
+			}else{
+				this.stop();
+			}
+		});
+		
+	},
+	stop:function(){
+		console.log('stopしたつもり');
+		this.removeEventListener();
+	},
+	addto: function(stage){
+		this.stage = stage;
+		stage.startpoints.push(this);
+		this.index = stage.startpoints.length-1;
+	},
+});
+
+
+
 var Trampoline = Class.create(Terrain, {
 	//constructor
 	initialize:function(x,y){
 		//call super constructor
-		Terrain.call(this,x,y,16*4,16);
+		Terrain.call(this,x,y,32*4,16);
 		this.image.changeColor('blue');
 		//field
 		this.extra_rebound = 1;
@@ -499,7 +612,7 @@ var Floor = Class.create(Terrain, {
 	//constructor
 	initialize:function(x,y){
 		//call super constructor
-		Terrain.call(this,x,y,16*4,16);
+		Terrain.call(this,x,y,32*4,16);
 		this.image.changeColor('yellow');
 		//field
 		this.color = 'gray';
@@ -520,7 +633,7 @@ var Conveyor = Class.create(Floor, {
 		Floor.call(this,x,y);
 		this.image.changeColor('orange');
 		//field
-		this.speed = 10;
+		this.speed = 16*4;
 		//this.image = core.assets['icon1.png'];
 		//event hundler
 		

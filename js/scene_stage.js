@@ -16,27 +16,21 @@ var Scene_stage = Class.create(Scene,{
 	initialize:function(stage){
 		Scene.call(this);
 		this.backgroundColor = 'blue';
-		
 
 		//ゲーム用変数
+		this.stage_origin = stage;
 		this.stage = stage;
 
 		this.selected_No = 0;
-
-		this.terrainNameList = [
-			'Floor',
-			'Trampoline',
-			'Conveyor',
-			'Trapdoor',
-			//'Sensor'
-		];
 
 
 		//パーツ
 		this.testLabel =  new Label('test: ???');
 		this.testLabel2 = new Label('test: ???');
-		this.selecter = new Parts_selecter(this);
-
+		this.sidebar = new Sidebar(this);
+		this.stageview = new Stageview(this);
+		this.stageview.image.changeColor('pink');
+		
 		//パーツ位置調整
 		this.testLabel.x = 10;
 		this.testLabel.y = 300;
@@ -47,47 +41,12 @@ var Scene_stage = Class.create(Scene,{
 		//パーツ追加
 		this.addChild(this.testLabel);
 		this.addChild(this.testLabel2);
+		this.addChild(this.stageview);
 
 		//ステージ読み込み
 		this.loadStageData(this.stage);
 
 		//イベントハンドラ
-		//画面クリックで現在選択中のパーツを設置
-		this.on(function(e){
-			switch(selected_No){
-			case 0:
-				putting = new Floor(e.x,e.y);
-				break;
-				
-			case 1:
-				putting = new Trampoline(e.x,e.y);
-				break;
-				
-			case 2:
-				putting = new Conveyor(e.x,e.y);
-				break;
-
-			case 3:
-				putting = new Trapdoor(e.x,e.y);
-				break;
-
-				
-			case 4:
-				putting = new Sensor(e.x,e.y);
-				break;
-				
-				
-			case 5:
-				putting = new wire(e.x,e.y);
-				break;
-				
-				
-			default:
-				putting = new Floor(e.x,e.y);
-				break;
-			}
-			putting.addto(this.stage);
-		});
 	},
 
 
@@ -110,6 +69,11 @@ var Scene_stage = Class.create(Scene,{
 		for(var l=0;l<this.stage.wire_obj.length;l++){
 			this.addChild(this.stage.wire_obj[l]);
 		}
+		
+		for(var l=0;l<this.stage.startpoints.length;l++){
+			this.addChild(this.stage.startpoints[l]);
+			this.stage.startpoints[l].run(this);
+		}
 
 	},
 
@@ -131,9 +95,21 @@ var Scene_stage = Class.create(Scene,{
 			this.removeChild(this.stage.wire_obj[l]);
 		}
 
-		this.stage = null;
+		for(var l=0;l<this.stage.startpoints.length;l++){
+			this.removeChild(this.stage.startpoints[l]);
+		}
+
+		this.stage = this.stage_origin;
 
 		//加えて、その他もろもろリセット
+
+	},
+
+	make_product:function(x,y,type){
+		var new_product = new Product(x,y,type);
+		console.log(new_product.type);
+		new_product.addto(this.stage);
+		this.addChild(new_product);
 	},
 });
 
@@ -152,14 +128,84 @@ var Scene_stage = Class.create(Scene,{
 */
 
 
+var Stageview = Class.create(Sprite2,{
+	initialize:function(scene){
+		
+		this.scene = scene;
+		Sprite2.call(this,scene.width-this.scene.sidebar.width,this.scene.height);
+		this.image.changeColor('orange');
+
+		this.mode_delete = -1;
+		this.mode_replace = -1;
+
+		this.on('touchstart',function(e){
+			//画面クリックで現在選択中のパーツを設置
+			//ただし、パーツ自体をクリックした時にはこのハンドラは反応しない
+			//設置モード
+			switch(this.scene.selected_No){
+			case 0:
+				putting = new Floor(e.x,e.y);
+				break;
+				
+			case 1:
+				putting = new Trampoline(e.x,e.y);
+				break;
+				
+			case 2:
+				putting = new Conveyor(e.x,e.y);
+				break;
+
+			case 3:
+				putting = new Trapdoor(e.x,e.y);
+				break;
+
+			case 4:
+				putting = new Sensor(e.x,e.y);
+				break;
+				
+			case 5:
+				putting = new Wire(e.x,e.y);
+				break;
+				
+			default:
+				//putting = new Floor(e.x,e.y);
+				putting = new product(e.x,e.y,'x');
+				break;
+			}
+			var scene = this.scene;
+			var stegeview = this;
+			scene.addChild(putting);
+			putting.addto(scene.stage);
+			//削除用イベントハンドラ
+			putting.on('touchstart',function(e){
+				if(stegeview.mode_delete>0){
+					scene.removeChild(this);
+					this.removefrom(scene.stage);
+				}
+			});
+			putting.on('touchmove',function(e){
+				if(stegeview.mode_replace>0){
+					this.x = e.x;
+					this.y = e.y;
+				}
+			});
+			console.log('stage have touched');
+		});
+	},
+	
+});
+
+
 
 var UI_button = Class.create(Sprite2,{
 	initialize:function(W,H){
 		Sprite2.call(this,W,H);
-		//this.image.changeColor('red');
 		this.image.drawEdge('black');
-
+		
 		this.label = new Label();
+		//ボタンに色つけるだけの装飾パネル
+		this.decolation_sprite = new Sprite2(this.width,this.height);
+		
 
 		this.on('touchstart',function(){
 			this.pushed();
@@ -173,32 +219,60 @@ var UI_button = Class.create(Sprite2,{
 		this.label.x = this.x;
 		this.label.y = this.y;
 	},
+	setColor:function(color){
+		this.decolation_sprite.image.changeColor('red');
+		this.decolation_sprite.x = this.x;
+		this.decolation_sprite.y = this.y;
+	},
+	/*
+	addto:function(new_color,new_text,scene){
+		this.setColor(new_color);
+		this.setText(new_text);
+		scene.addChild(this.decolation_sprite);//装飾パネルを敷いて...
+		scene.addChild(this.label);//ラベルを敷いて...
+		scene.addChild(this);//最後に透明なボタンをかぶせる
+	},
+	 */
 	
 });
 
 
 
-var PS_button = Class.create(UI_button,{//パーツセレクト
-	initialize:function(W,H,PS,value){
+var PS_button = Class.create(UI_button,{//パーツセレクトボタン
+	initialize:function(W,H,sidebar,value){
 		UI_button.call(this,W,H);
-		//this.image.changeColor('red');
 		this.image.drawEdge('black');
-
+		
 		this.value = value;
-		this.PS = PS;
+		this.sidebar = sidebar;
+		
 	},
 	pushed:function(){
 		//console.log('UI_button:I have pushed');
-		this.PS.selected_No = this.value;
-		this.PS.scene.testLabel.text = this.PS.nameList[this.PS.selected_No];
+		this.sidebar.selectParts(this.value);
 	},
 	
+});
+
+
+
+var Reset_button = Class.create(UI_button,{//リセットボタン
+	initialize:function(W,H,sidebar){
+		UI_button.call(this,W,H);
+		this.image.drawEdge('black');
+
+		this.sidebar = sidebar;
+	},
+	pushed:function(){
+		this.sidebar.scene.resetStageData();
+	},
 });
 
 
 
 var Sidebar = Class.create(Sprite2,{
 	//パーツを選択するためのUI
+	//ひも付けされているシーンの選択パーツを変更する
 	initialize:function(scene){
 		Sprite2.call(this,scene.width*1/8,scene.height);
 
@@ -216,7 +290,7 @@ var Sidebar = Class.create(Sprite2,{
 			'Sensor'
 		];
 
-		//ベースをシーンに追加
+		//まずボタンを置くベースをシーンに追加
 		this.scene.addChild(this);
 
 		//ボタンを追加する
@@ -224,6 +298,7 @@ var Sidebar = Class.create(Sprite2,{
 		var pre_y = this.y;
 		var space = this.height/50;//ボタンの間隔
 		//以下、ボタンを追加＆ラベル書き換え処理
+		//パーツ追加ボタンx5
 		for(var i=0;i<this.nameList.length;i++){
 			this.buttons[i] = new PS_button(this.width*8/10,this.height*1/20,this,i);
 
@@ -231,10 +306,35 @@ var Sidebar = Class.create(Sprite2,{
 			this.buttons[i].y = pre_y + space;
 			pre_y = this.buttons[i].y + this.buttons[i].height;
 			this.buttons[i].setText(this.nameList[i]);
-			scene.addChild(this.buttons[i].label);//ラベルを敷いて...
+			
+			//ボタンに色つけるだけの装飾パネル
+			var decolation_sprite = new Sprite2(this.buttons[i].width,this.buttons[i].height);
+			decolation_sprite.image.changeColor('red');
+			decolation_sprite.x = this.buttons[i].x;
+			decolation_sprite.y = this.buttons[i].y;
+
+			this.scene.addChild(decolation_sprite);//装飾パネルを敷いて...
+			this.scene.addChild(this.buttons[i].label);//ラベルを敷いて...
 			this.scene.addChild(this.buttons[i]);//最後に透明なボタンをかぶせる
 			
 		}
-
+		//リセットボタン
+		this.button_reset = new Reset_button(this.width*8/10,this.height*2/20,this);
+		this.button_reset.x = this.buttons[this.buttons.length-1].x;
+		this.button_reset.y = this.buttons[this.buttons.length-1].y + 2*(space + this.buttons[0].height);
+		this.button_reset.setColor('red');
+		this.button_reset.setText('RESET!');
+		this.scene.addChild(this.button_reset.decolation_sprite);//装飾パネルを敷いて...
+		this.scene.addChild(this.button_reset.label);//ラベルを敷いて...
+		this.scene.addChild(this.button_reset);//最後に透明なボタンをかぶせる
+		//this.button_reset.addto(this.scene);
+	},
+	selectParts:function(i){
+		this.scene.selected_No = i;
+		//this.scene.testLabel.text = this.nameList[i];
+		for(var j=0;j<this.buttons.length;j++){
+			this.buttons[j].image.drawEdge('black');
+		}
+		this.buttons[i].image.drawEdge('yellow');
 	},
 });
