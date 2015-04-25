@@ -167,6 +167,13 @@ var Stage_parts = Class.create(Sprite2, {
 	removefrom: function(stage){
 		this.stage = stage;
 	},
+	getInfo_JSON: function(){
+		var info = {
+			'hello':'world',
+		};
+		info_JSON = JSON.stringify(info);
+		return info_JSON;
+	}
 });
 
 
@@ -247,7 +254,7 @@ var Terrain = Class.create(Stage_parts, {
 				var obj = this.stage.physical_obj[i];
 				if(this.intersect(obj)){
 					this.image.drawEdge('red');
-					this.touch_onBorder(obj);
+					this.touch_onBorder(obj);//<=== 衝突時の処理
 				}else{
 					this.image.drawEdge('black');
 				}
@@ -463,7 +470,6 @@ var Wire = Class.create(Stage_parts,{
 		this.x = this.source_x;
 		this.y = this.source_y;
 		this.drawWire('black');
-		
 	},
 	transmit:function(value){
 		//console.log('wire: transmit');
@@ -477,7 +483,7 @@ var Wire = Class.create(Stage_parts,{
 	},
 	drawWire:function(color){
 		this.image.drawLine(
-			0,0,
+			this.source_x,this.source_y,
 			this.width,this.height,
 			color);
 		//this.image.drawEdge('color');
@@ -556,31 +562,57 @@ var Startpoint = Class.create(Stage_parts,{
 
 		this.products_type = ['x','xc','xs','xa','x','xbb','xew','x','xg','xp'];
 		this.pointer = 0;
+
+		this.running = -1;
+		
 	},
 	run:function(scene){
-		var typelist = this.products_type;
+		this.running = 1;
 		this.on('enterframe',function(){
-			if(this.pointer<this.products_type.length){
-				if(this.age%this.span_frame==0){						
+			if(this.running>0&&this.pointer<this.products_type.length){
+				if(this.age%this.span_frame==0){
+					var typelist = this.products_type;
 					console.log('ブロックを作ったつもり : '+this.age);
 					scene.make_product(this.x,this.y
 									   ,typelist[this.pointer]);
 					this.pointer++;
 				}
-			}else{
-				this.stop();
 			}
 		});
-		
 	},
 	stop:function(){
 		console.log('stopしたつもり');
-		this.removeEventListener();
+		this.running = -1;
 	},
 	addto: function(stage){
 		this.stage = stage;
 		stage.startpoints.push(this);
 		this.index = stage.startpoints.length-1;
+	},
+});
+
+
+
+var GoalPoint = Class.create(Terrain,{
+	initialize:function(x,y,type){
+		//受け取った製品のtypeが違ったらペナルティを課す
+		Terrain.call(this,x,y,32*2,32);
+		this.image.changeColor('black');
+		this.goal_type = type;
+	},
+	receive:function(product){
+		console.log('受け取ったつもり type = '+ product.type);
+		if(product.type==this.goal_type){
+			console.log('good!!');
+			return 1;
+		}else{
+			console.log('poor...');
+			return -1;
+		}
+	},
+	touch_onBorder:function(obj){
+		var is_match = this.receive(obj);
+		return is_match;;
 	},
 });
 

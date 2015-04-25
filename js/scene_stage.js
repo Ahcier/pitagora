@@ -20,6 +20,7 @@ var Scene_stage = Class.create(Scene,{
 		//ゲーム用変数
 		this.stage_origin = stage;
 		this.stage = stage;
+		this.mode_capture = -1;
 
 		this.selected_No = 0;
 
@@ -47,6 +48,7 @@ var Scene_stage = Class.create(Scene,{
 		this.loadStageData(this.stage);
 
 		//イベントハンドラ
+		this.set_keybind();
 	},
 
 
@@ -72,7 +74,7 @@ var Scene_stage = Class.create(Scene,{
 		
 		for(var l=0;l<this.stage.startpoints.length;l++){
 			this.addChild(this.stage.startpoints[l]);
-			this.stage.startpoints[l].run(this);
+			//this.stage.startpoints[l].run(this);
 		}
 
 	},
@@ -98,8 +100,10 @@ var Scene_stage = Class.create(Scene,{
 		for(var l=0;l<this.stage.startpoints.length;l++){
 			this.removeChild(this.stage.startpoints[l]);
 		}
-
-		this.stage = this.stage_origin;
+		//this.stage = this.stage_origin;
+		this.stage = new Stage();
+		console.log(this.stage);
+		this.loadStageData(this.stage);
 
 		//加えて、その他もろもろリセット
 
@@ -111,6 +115,39 @@ var Scene_stage = Class.create(Scene,{
 		new_product.addto(this.stage);
 		this.addChild(new_product);
 	},
+
+	set_keybind:function(){
+		this.on('keyzbuttondown',function(){
+			//console.log('scene_stage:key_z buttondown');
+			if(this.stageview.mode_delete<0){
+				this.stageview.mode_delete = 1;
+			}
+		});
+		this.on('keyzbuttonup',function(){
+			//console.log('scene_stage:key_z buttonup');
+			if(this.stageview.mode_delete>0){
+				this.stageview.mode_delete = -1;
+			}
+		});
+		this.on('keyxbuttondown',function(){
+			//console.log('scene_stage:key_x buttondown');
+			if(this.stageview.mode_replace<0){
+				this.stageview.mode_replace = 1;
+			}
+		});
+		this.on('keyxbuttonup',function(){
+			//console.log('scene_stage:key_x buttonup');
+			if(this.stageview.mode_replace>0){
+				this.stageview.mode_replace = -1;
+			}
+		});
+		this.on('key0buttondown',function(){
+			//emulater
+			console.log('key0 test');
+			this.stageview.backgroundColor;
+			//JSON.stringify(this.stage);使えねえ野郎だ
+		});
+	}
 });
 
 
@@ -160,11 +197,12 @@ var Stageview = Class.create(Sprite2,{
 				break;
 
 			case 4:
-				putting = new Sensor(e.x,e.y);
+				//putting = new Sensor(e.x,e.y);
+				putting = new GoalPoint(e.x,e.y,'xp');
 				break;
 				
 			case 5:
-				putting = new Wire(e.x,e.y);
+				//putting = new Wire(e.x,e.y);
 				break;
 				
 			default:
@@ -220,31 +258,34 @@ var UI_button = Class.create(Sprite2,{
 		this.label.y = this.y;
 	},
 	setColor:function(color){
-		this.decolation_sprite.image.changeColor('red');
+		this.decolation_sprite.image.changeColor(color);
 		this.decolation_sprite.x = this.x;
 		this.decolation_sprite.y = this.y;
 	},
-	/*
-	addto:function(new_color,new_text,scene){
+	
+	addto:function(x,y,new_color,new_text,scene){
+		this.x = x;
+		this.y = y;
 		this.setColor(new_color);
 		this.setText(new_text);
 		scene.addChild(this.decolation_sprite);//装飾パネルを敷いて...
 		scene.addChild(this.label);//ラベルを敷いて...
 		scene.addChild(this);//最後に透明なボタンをかぶせる
 	},
-	 */
+	
 	
 });
 
 
 
-var PS_button = Class.create(UI_button,{//パーツセレクトボタン
+var PS_button = Class.create(UI_button,{//パーツセレクトボタン=PS_button
 	initialize:function(W,H,sidebar,value){
 		UI_button.call(this,W,H);
 		this.image.drawEdge('black');
 		
 		this.value = value;
 		this.sidebar = sidebar;
+		this.left_num = 0;
 		
 	},
 	pushed:function(){
@@ -265,6 +306,36 @@ var Reset_button = Class.create(UI_button,{//リセットボタン
 	},
 	pushed:function(){
 		this.sidebar.scene.resetStageData();
+	},
+});
+
+
+
+var Start_button = Class.create(UI_button,{
+	initialize:function(W,H,sidebar){
+		UI_button.call(this,W,H);
+		this.image.drawEdge('black');
+
+		this.sidebar = sidebar;
+	},
+	pushed:function(){
+		console.log('start game');
+		this.sidebar.startGame();
+	},
+});
+
+
+
+var Stop_button = Class.create(UI_button,{
+	initialize:function(W,H,sidebar){
+		UI_button.call(this,W,H);
+		this.image.drawEdge('black');
+
+		this.sidebar = sidebar;
+	},
+	pushed:function(){
+		console.log('stop game');
+		this.sidebar.stopGame();
 	},
 });
 
@@ -298,7 +369,7 @@ var Sidebar = Class.create(Sprite2,{
 		var pre_y = this.y;
 		var space = this.height/50;//ボタンの間隔
 		//以下、ボタンを追加＆ラベル書き換え処理
-		//パーツ追加ボタンx5
+		//パーツセレクトボタンx5
 		for(var i=0;i<this.nameList.length;i++){
 			this.buttons[i] = new PS_button(this.width*8/10,this.height*1/20,this,i);
 
@@ -309,7 +380,7 @@ var Sidebar = Class.create(Sprite2,{
 			
 			//ボタンに色つけるだけの装飾パネル
 			var decolation_sprite = new Sprite2(this.buttons[i].width,this.buttons[i].height);
-			decolation_sprite.image.changeColor('red');
+			decolation_sprite.image.changeColor('orange');
 			decolation_sprite.x = this.buttons[i].x;
 			decolation_sprite.y = this.buttons[i].y;
 
@@ -318,17 +389,29 @@ var Sidebar = Class.create(Sprite2,{
 			this.scene.addChild(this.buttons[i]);//最後に透明なボタンをかぶせる
 			
 		}
+
+		//スタートボタン
+		this.button_start = new Start_button(this.width*8/10,this.height*2/20,this);
+		this.button_start.addto(
+			this.buttons[this.buttons.length-1].x,
+			this.buttons[this.buttons.length-1].y + 2*(space + this.buttons[0].height),
+			'yellow','START',this.scene);
+
+		//ストップボタン
+		this.button_stop = new Stop_button(this.width*8/10,this.height*1/20,this);
+		this.button_stop.addto(
+			this.button_start.x,
+			this.button_start.y + this.button_start.height + space,
+			'blue','STOP',this.scene);
+		
 		//リセットボタン
-		this.button_reset = new Reset_button(this.width*8/10,this.height*2/20,this);
-		this.button_reset.x = this.buttons[this.buttons.length-1].x;
-		this.button_reset.y = this.buttons[this.buttons.length-1].y + 2*(space + this.buttons[0].height);
-		this.button_reset.setColor('red');
-		this.button_reset.setText('RESET!');
-		this.scene.addChild(this.button_reset.decolation_sprite);//装飾パネルを敷いて...
-		this.scene.addChild(this.button_reset.label);//ラベルを敷いて...
-		this.scene.addChild(this.button_reset);//最後に透明なボタンをかぶせる
-		//this.button_reset.addto(this.scene);
+		this.button_reset = new Reset_button(this.width*8/10,this.height*1/20,this);
+		this.button_reset.addto(
+			this.button_stop.x,
+			this.button_stop.y + this.button_stop.height + space,
+			'red','RESET',this.scene);
 	},
+	
 	selectParts:function(i){
 		this.scene.selected_No = i;
 		//this.scene.testLabel.text = this.nameList[i];
@@ -337,4 +420,18 @@ var Sidebar = Class.create(Sprite2,{
 		}
 		this.buttons[i].image.drawEdge('yellow');
 	},
+
+	startGame:function(){
+		starts = this.scene.stage.startpoints;
+		for(var i=0;i<starts.length;i++){
+			starts[i].run(this.scene);
+		}
+	},
+
+	stopGame:function(){
+		starts = this.scene.stage.startpoints;
+		for(var i=0;i<starts.length;i++){
+			starts[i].stop();
+		}
+	}
 });

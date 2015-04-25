@@ -27,33 +27,6 @@ window.onload = function(){
 		startp.addto(stage);
 
 		var ss = new Scene_stage(stage);
-		ss.on('keyzbuttondown',function(){
-			console.log('ss:key_z buttondown');
-			if(this.stageview.mode_delete<0){
-				this.stageview.mode_delete = 1;
-			}
-		});
-		ss.on('keyzbuttonup',function(){
-			console.log('ss:key_z buttonup');
-			if(this.stageview.mode_delete>0){
-				this.stageview.mode_delete = -1;
-			}
-		});
-		ss.on('keyxbuttondown',function(){
-			console.log('ss:key_x buttondown');
-			if(this.stageview.mode_replace<0){
-				this.stageview.mode_replace = 1;
-			}
-		});
-		ss.on('keyxbuttonup',function(){
-			console.log('ss:key_x buttonup');
-			if(this.stageview.mode_replace>0){
-				this.stageview.mode_replace = -1;
-			}
-		});
-		ss.on('keycbuttondown',function(){
-			console.log(this.stage);
-		});
 
 		core.pushScene(ss);
 	};
@@ -78,6 +51,7 @@ window.onload = function(){
 		core.keybind('1'.charCodeAt(0),'keyz');
 		core.keybind('2'.charCodeAt(0),'keyx');
 		core.keybind('3'.charCodeAt(0),'keyc');
+		core.keybind('0'.charCodeAt(0),'key0');
 	};
 		
 	
