@@ -26,23 +26,20 @@ var Scene_stage = Class.create(Scene,{
 
 
 		//パーツ
-		this.testLabel =  new Label('test: ???');
-		this.testLabel2 = new Label('test: ???');
+		this.notice = new Label('notice');
 		this.sidebar = new Sidebar(this);
 		this.stageview = new Stageview(this);
 		this.stageview.image.changeColor('pink');
+		this.wire_manager = new Wire_manager(this);
 		
 		//パーツ位置調整
-		this.testLabel.x = 10;
-		this.testLabel.y = 300;
-		
-		this.testLabel2.x = 100;
-		this.testLabel2.y = 300;
+		this.notice.x = 10;
+		this.notice.y = 10;
 
 		//パーツ追加
-		this.addChild(this.testLabel);
-		this.addChild(this.testLabel2);
 		this.addChild(this.stageview);
+		
+		this.addChild(this.notice);
 
 		//ステージ読み込み
 		this.loadStageData(this.stage);
@@ -74,7 +71,6 @@ var Scene_stage = Class.create(Scene,{
 		
 		for(var l=0;l<this.stage.startpoints.length;l++){
 			this.addChild(this.stage.startpoints[l]);
-			//this.stage.startpoints[l].run(this);
 		}
 
 	},
@@ -116,6 +112,33 @@ var Scene_stage = Class.create(Scene,{
 		this.addChild(new_product);
 	},
 
+	snapshot:function(){
+		console.log('snapshot');
+		var snapshot = [];
+		for(var i=0;i<this.stage.physical_obj.length;i++){
+			//snapshot.push(this.stage.physical_obj[i].getInfo_JSON());
+		}
+
+		for(var j=0;j<this.stage.terrain_obj.length;j++){
+			snapshot.push(this.stage.terrain_obj[j].getInfo());
+		}
+
+		for(var j=0;j<this.stage.sensor_obj.length;j++){
+			snapshot.push(this.stage.sensor_obj[j].getInfo());
+		}
+
+		for(var l=0;l<this.stage.wire_obj.length;l++){
+			snapshot.push(this.stage.wire_obj[l].getInfo());
+		}
+		
+		for(var l=0;l<this.stage.startpoints.length;l++){
+			snapshot.push(this.stage.startpoints[l].getInfo());
+		}
+		var snapshot_JSON = JSON.stringify(snapshot);
+		//return snapshot;
+		return snapshot_JSON;
+	},
+
 	set_keybind:function(){
 		this.on('keyzbuttondown',function(){
 			//console.log('scene_stage:key_z buttondown');
@@ -129,6 +152,7 @@ var Scene_stage = Class.create(Scene,{
 				this.stageview.mode_delete = -1;
 			}
 		});
+		
 		this.on('keyxbuttondown',function(){
 			//console.log('scene_stage:key_x buttondown');
 			if(this.stageview.mode_replace<0){
@@ -141,13 +165,18 @@ var Scene_stage = Class.create(Scene,{
 				this.stageview.mode_replace = -1;
 			}
 		});
+		
 		this.on('key0buttondown',function(){
-			//emulater
-			console.log('key0 test');
-			this.stageview.backgroundColor;
+			console.log('key0 test:down');
+			//var stage_json = '[{"parts_id":100,"x":87.60064412238324,"y":298.8727858293076},{"parts_id":100,"x":217.45571658615137,"y":298.8727858293076},{"parts_id":100,"x":347.3107890499195,"y":298.8727858293076}]';
+			//this.stage.load_stageJSON(stage_json);
+			//this.loadStageData(this.stage);
+
+			console.log(this.snapshot());
+			
 			//JSON.stringify(this.stage);使えねえ野郎だ
 		});
-	}
+	},
 });
 
 
@@ -174,6 +203,7 @@ var Stageview = Class.create(Sprite2,{
 
 		this.mode_delete = -1;
 		this.mode_replace = -1;
+		this.mode_wire = -1;
 
 		this.on('touchstart',function(e){
 			//画面クリックで現在選択中のパーツを設置
@@ -197,12 +227,15 @@ var Stageview = Class.create(Sprite2,{
 				break;
 
 			case 4:
-				//putting = new Sensor(e.x,e.y);
-				putting = new GoalPoint(e.x,e.y,'xp');
+				putting = new Sensor(e.x,e.y);
 				break;
 				
 			case 5:
-				//putting = new Wire(e.x,e.y);
+				putting = new Startpoint(e.x,e.y,2);
+				break;
+				
+			case 6:
+				putting = new GoalPoint(e.x,e.y,'xp');
 				break;
 				
 			default:
@@ -210,28 +243,86 @@ var Stageview = Class.create(Sprite2,{
 				putting = new product(e.x,e.y,'x');
 				break;
 			}
-			var scene = this.scene;
-			var stegeview = this;
-			scene.addChild(putting);
-			putting.addto(scene.stage);
-			//削除用イベントハンドラ
-			putting.on('touchstart',function(e){
-				if(stegeview.mode_delete>0){
-					scene.removeChild(this);
-					this.removefrom(scene.stage);
-				}
-			});
-			putting.on('touchmove',function(e){
-				if(stegeview.mode_replace>0){
-					this.x = e.x;
-					this.y = e.y;
-				}
-			});
-			console.log('stage have touched');
+			this.put_parts(putting);
 		});
 	},
-	
+	put_parts:function(parts){
+		var scene = this.scene;
+		var stegeview = this;
+		scene.addChild(parts);
+		parts.addto(scene.stage);
+		//削除用イベントハンドラ
+		parts.on('touchstart',function(e){
+			if(stegeview.mode_delete>0){
+				scene.removeChild(this);
+				this.removefrom(scene.stage);
+			}
+		});
+		//移動用イベントハンドラ
+		parts.on('touchmove',function(e){
+			if(stegeview.mode_replace>0){
+				this.x = e.x;
+				this.y = e.y;
+			}
+		});
+	},
 });
+
+
+
+function Wire_manager(scene){
+	//wireのsceneへの追加を担当
+	this.scene = scene;
+	this.phase = 0;
+	//0:開始前,1:接続するセンサーの選択,2:接続する機械の選択
+	
+	this.add_wire = function(){
+
+		if(this.phase == 0) this.phase = 1;//センサーの選択開始
+		console.log('接続元を選択 phase' + this.phase);
+		
+		var phase = this.phase;
+		var src = null;
+		var dist = null;
+		var stage = this.scene.stage;
+		
+		//センサーオブジェクトのボタン化(id=200)
+		for(var i=0;i<stage.sensor_obj.length;i++){
+			if(stage.sensor_obj[i].parts_id == 200){
+				var source = stage.sensor_obj[i];
+				source.on('touchstart',function(){
+					if(phase==1){
+						src = this;
+						phase = 2;//センサーからの接続先の選択へ
+						console.log('接続先を選択 phase' + phase);
+					}
+				});
+			}
+		}
+		
+		//センサー接続先オブジェクトのボタン化(id=102)
+		for(var i=0;i<stage.terrain_obj.length;i++){
+			if(stage.terrain_obj[i].parts_id == 102){
+				dist = stage.terrain_obj[i];
+				dist.on('touchstart',function(){
+					if(phase==2){
+						dist = this;
+						//wire生成,接続
+						var wire = src.connectWire(dist);
+						//wire.addto(stage);
+						scene.addChild(wire);
+						scene.stageview.put_parts(wire);
+						
+						phase = 0;
+						console.log('接続完了 phase' + phase);
+					}
+				});
+			}
+		}
+
+		
+	};
+}
 
 
 
@@ -297,6 +388,21 @@ var PS_button = Class.create(UI_button,{//パーツセレクトボタン=PS_butt
 
 
 
+var Wire_button = Class.create(UI_button,{
+	initialize:function(W,H,sidebar){
+		UI_button.call(this,W,H);
+		this.image.drawEdge('black');
+		this.setColor('purple');
+
+		this.sidebar = sidebar;
+	},
+	pushed:function(){
+		this.sidebar.scene.wire_manager.add_wire();
+	},
+});
+
+
+
 var Reset_button = Class.create(UI_button,{//リセットボタン
 	initialize:function(W,H,sidebar){
 		UI_button.call(this,W,H);
@@ -358,7 +464,9 @@ var Sidebar = Class.create(Sprite2,{
 			'Trampoline',
 			'Conveyor',
 			'Trapdoor',
-			'Sensor'
+			'Sensor',
+			'Start',
+			'Goal',
 		];
 
 		//まずボタンを置くベースをシーンに追加
@@ -369,7 +477,7 @@ var Sidebar = Class.create(Sprite2,{
 		var pre_y = this.y;
 		var space = this.height/50;//ボタンの間隔
 		//以下、ボタンを追加＆ラベル書き換え処理
-		//パーツセレクトボタンx5
+		//パーツセレクトボタン x Nこ
 		for(var i=0;i<this.nameList.length;i++){
 			this.buttons[i] = new PS_button(this.width*8/10,this.height*1/20,this,i);
 
@@ -390,11 +498,18 @@ var Sidebar = Class.create(Sprite2,{
 			
 		}
 
+		//ワイヤーボタン
+		this.button_wire = new Wire_button(this.width*8/10,this.height*1/20,this);
+		this.button_wire.addto(
+			this.buttons[this.buttons.length-1].x,
+			this.buttons[this.buttons.length-1].y + 2*(space + this.buttons[0].height),
+			'purple','WIRE',this.scene);
+
 		//スタートボタン
 		this.button_start = new Start_button(this.width*8/10,this.height*2/20,this);
 		this.button_start.addto(
-			this.buttons[this.buttons.length-1].x,
-			this.buttons[this.buttons.length-1].y + 2*(space + this.buttons[0].height),
+			this.button_wire.x,
+			this.button_wire.y + 2*(space + this.buttons[0].height),
 			'yellow','START',this.scene);
 
 		//ストップボタン
@@ -414,7 +529,8 @@ var Sidebar = Class.create(Sprite2,{
 	
 	selectParts:function(i){
 		this.scene.selected_No = i;
-		//this.scene.testLabel.text = this.nameList[i];
+		
+		//選択したボタンの枠線の色付け
 		for(var j=0;j<this.buttons.length;j++){
 			this.buttons[j].image.drawEdge('black');
 		}

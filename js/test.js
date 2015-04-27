@@ -23,8 +23,8 @@ window.onload = function(){
 	
 	var test_scenestage = function(){
 		var stage = new Stage();
-		var startp = new Startpoint(100,100,1);
-		startp.addto(stage);
+		//var startp = new Startpoint(100,100,1);
+		//startp.addto(stage);
 
 		var ss = new Scene_stage(stage);
 

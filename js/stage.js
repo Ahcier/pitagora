@@ -39,44 +39,74 @@ function Stage(){
 	//やってくるブロックの情報
 	//Startpointsクラスのオブジェクトを格納
 	this.startpoints = [];
+	this.goalpoints = [];
 
 	//種類,間隔,位置
+
+	/*
+	 this.test_function = function(){
+		console.log('hello function!!!!!!!!!!!!');
+	};
+	*/
+	
+	this.load_stageJSON = function(stage_JSON){
+		var stage_data = JSON.parse(stage_JSON);
+		//stage_data -> parts_id,x,y
+		var putting;
+		for(var i=0;i<stage_data.length;i++){
+			
+			parts_data = stage_data[i];
+			var id = parts_data.parts_id;
+			switch(id){
+			case 0:
+				putting = new Product(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+				
+			case 100:
+				putting = new Floor(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
+			case 101:
+				putting = new Trampoline(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
+			case 102:
+				putting = new Trapdoor(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
+				
+			case 200:
+				putting = new Sensor(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
+			case 300:
+				putting = new Wire(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
+			case 1000:
+				putting = new Startpoint(parts_data.x,parts_data.y,3);
+				putting.products_type = parts_data.products_type;
+				putting.addto(this);
+				break;
+
+			case 2000:
+				putting = new GoalPoint(parts_data.x,parts_data.y,parts_data.goal_type);
+				putting.addto(this);
+				break;
+						
+			}
+		
+		}
+	};
+	
 };
 
-
-
-/*
-
-var Stage = function(){
-};
-
-//ゲーム用変数
-Stage.prototype.gravity = 100;
-
-//構成パーツの保持
-Stage.prototype.physical_obj = [];
-Stage.prototype.terrain_obj = [];
-Stage.prototype.sensor_obj = [];
-Stage.prototype.wire_obj = [];
-
-*/
-
-/*
-
-var Stage = Class.create(Sprite,{
-	initialize:function(){
-		//ゲーム用変数
-		this.gravity = 100;
-
-		//構成パーツの保持
-		this.physical_obj = [];
-		this.terrain_obj = [];
-		this.sensor_obj = [];
-		this.wire_obj = [];
-	},
-});
-
-*/
 
 
 //********************object********************
@@ -154,6 +184,7 @@ var Stage_parts = Class.create(Sprite2, {
 
 		this.stage = null;
 		this.index = null;
+		this.parts_id = -1;
 
 		//event hundler
 	},
@@ -167,13 +198,15 @@ var Stage_parts = Class.create(Sprite2, {
 	removefrom: function(stage){
 		this.stage = stage;
 	},
-	getInfo_JSON: function(){
+	getInfo: function(){
 		var info = {
-			'hello':'world',
+			//'hello':'world',
+			parts_id:this.parts_id,
+			x:this.x,
+			y:this.y,
 		};
-		info_JSON = JSON.stringify(info);
-		return info_JSON;
-	}
+		return info;
+	},
 });
 
 
@@ -379,16 +412,15 @@ var Trapdoor = Class.create(gimicTerrain,{
 		gimicTerrain.call(this,x,y,32*2,32/2);
 		this.image.changeColor('purple');
 		this.disappear = -1;
+		this.parts_id = 102;
 		
 	},
 	powerOn_event:function(){
 		this.disappear*=-1;
 		if(this.disappear>0){	
 			this.opacity = 0.5;
-			this.touchEnabled = false;
 		}else{
 			this.opacity = 1;
-			this.touchEnabled = true;
 		}
 	},
 });
@@ -407,8 +439,7 @@ var Sensor = Class.create(Stage_parts,{
 			this.search();
 			this.send(this.capture);
 		});
-		
-		
+		this.parts_id = 200;
 	},
 	
 	search:function(){
@@ -424,12 +455,12 @@ var Sensor = Class.create(Stage_parts,{
 		}
 	},
 	connectWire:function(dist){
-		//console.log('generate new wire...');
+		console.log('generate new wire...');
 		var wire = new Wire(this,dist);
-		//console.log('sensor:wire connected');
+		console.log('sensor:wire connected');
 		this.wires.push(wire);
 
-		return wire;
+		return wire;//返却値をどうぞご利用ください!!!!!!!!!
 	},
 	
 	send:function(value){
@@ -464,12 +495,29 @@ var Wire = Class.create(Stage_parts,{
 		this.dist_x = dist.getCenter()[0];
 		this.dist_y = dist.getCenter()[1];
 		Stage_parts.call(this,
-						 this.dist_x-this.source_x,
-						 this.dist_y-this.source_y,
-						 stage);
-		this.x = this.source_x;
-		this.y = this.source_y;
+						 Math.abs(this.dist_x-this.source_x),
+						 Math.abs(this.dist_y-this.source_y)
+						);
+		//めんどくさいがwireの大きさが正のままで成立する位置に移動する
+		var _x = this.dist_x - this.source_x;
+		var _y = this.dist_y - this.source_y;
+		if(_x>=0&&_y>=0){//++
+			this.x = this.source_x;
+			this.y = this.source_y;
+		}else if(_x<0&&_y>=0){//-+
+			this.x = this.source_x - this.width;
+			this.y = this.source_y ;
+		}else if(_x<0&&_y<0){//--
+			this.x = this.source_x - this.width;
+			this.y = this.source_y - this.height;
+		}else if(_x>=0&&_y<0){//+-
+			this.x = this.source_x;
+			this.y = this.source_y - this.height;
+		}
+		
 		this.drawWire('black');
+
+		this.parts_id = 300;
 	},
 	transmit:function(value){
 		//console.log('wire: transmit');
@@ -482,17 +530,30 @@ var Wire = Class.create(Stage_parts,{
 		}
 	},
 	drawWire:function(color){
-		this.image.drawLine(
-			this.source_x,this.source_y,
+		//drawLineが負の数を入れると壊れるので、座標の位置関係で場合分け
+		var _x = this.dist_x - this.source_x;
+		var _y = this.dist_y - this.source_y;
+		
+		//this.image.drawEdge(color);
+		
+		if(_x*_y<0){//2,4象限,右上がり
+			this.image.drawLine(
+			0,this.height,
+			this.width,0,
+			color);
+		}else{//1,3象限,右下がり
+			this.image.drawLine(
+			0,0,
 			this.width,this.height,
 			color);
-		//this.image.drawEdge('color');
+		}
+		
+		
 		console.log('draw wire');
 	},
 	addto: function(stage){
-		if(this.stage.wire_obj == null)throw new Error('引数がStageクラスではありません');
 		this.stage = stage;
-		stage.wire_obj.push(this);
+		this.stage.wire_obj.push(this);
 		this.index = stage.wire_obj.length-1;
 	},
 	removefrom:function(stage){
@@ -541,6 +602,8 @@ var Product = Class.create(Physical, {
 		this.image.drawEdge('black');
 		this.val_rebound = 0.1;
 		this.type = type;
+
+		this.parts_id = 0;
 	},
 	goal:function(goal){
 		if(goal.type==this.type) console.log('やったぜ');
@@ -560,15 +623,17 @@ var Startpoint = Class.create(Stage_parts,{
 		this.image.drawEdge('black');
 		this.span_frame = span_sec * this.fps;
 
-		this.products_type = ['x','xc','xs','xa','x','xbb','xew','x','xg','xp'];
+		this.products_type = ['A','A','A','A','A','A'];
 		this.pointer = 0;
 
 		this.running = -1;
-		
+
+		this.parts_id = 1000;
 	},
 	run:function(scene){
 		this.running = 1;
 		this.on('enterframe',function(){
+			//type配列を元にproductを生産
 			if(this.running>0&&this.pointer<this.products_type.length){
 				if(this.age%this.span_frame==0){
 					var typelist = this.products_type;
@@ -589,6 +654,16 @@ var Startpoint = Class.create(Stage_parts,{
 		stage.startpoints.push(this);
 		this.index = stage.startpoints.length-1;
 	},
+	getInfo: function(){
+		var info = {
+			//'hello':'world',
+			parts_id:this.parts_id,
+			x:this.x,
+			y:this.y,
+			products_type:this.products_type,
+		};
+		return info;
+	},
 });
 
 
@@ -599,6 +674,7 @@ var GoalPoint = Class.create(Terrain,{
 		Terrain.call(this,x,y,32*2,32);
 		this.image.changeColor('black');
 		this.goal_type = type;
+		this.parts_id = 2000;
 	},
 	receive:function(product){
 		console.log('受け取ったつもり type = '+ product.type);
@@ -614,6 +690,16 @@ var GoalPoint = Class.create(Terrain,{
 		var is_match = this.receive(obj);
 		return is_match;;
 	},
+	getInfo: function(){
+		var info = {
+			//'hello':'world',
+			parts_id:this.parts_id,
+			x:this.x,
+			y:this.y,
+			goal_type:this.goal_type,
+		};
+		return info;
+	},
 });
 
 
@@ -626,6 +712,7 @@ var Trampoline = Class.create(Terrain, {
 		this.image.changeColor('blue');
 		//field
 		this.extra_rebound = 1;
+		this.parts_id = 1;
 		//event hundler
 		
 	},
@@ -648,6 +735,7 @@ var Floor = Class.create(Terrain, {
 		this.image.changeColor('yellow');
 		//field
 		this.color = 'gray';
+		this.parts_id = 0;
 		//this.image = core.assets['icon1.png'];
 		//event hundler
 		
@@ -666,6 +754,7 @@ var Conveyor = Class.create(Floor, {
 		this.image.changeColor('orange');
 		//field
 		this.speed = 16*4;
+		this.parts_id = 2;
 		//this.image = core.assets['icon1.png'];
 		//event hundler
 		
