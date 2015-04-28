@@ -12,7 +12,7 @@ enchant();
 
 
 
-function Stage(){
+function Stage(stage_id){
 
 	
 	//ゲーム用変数
@@ -41,13 +41,12 @@ function Stage(){
 	this.startpoints = [];
 	this.goalpoints = [];
 
-	//種類,間隔,位置
+	//JSON形式の文字列、stageのload_stageJSONで読み込み可能
+	this.stageJSONstrings = [];
 
-	/*
-	 this.test_function = function(){
-		console.log('hello function!!!!!!!!!!!!');
-	};
-	*/
+	var JSON01 =
+		'[{"parts_id":2000,"x":919.2914653784219,"y":218.48631239935588,"goal_type":"A"},{"parts_id":103,"x":107.18196457326891,"y":215.39452495974234},{"parts_id":100,"x":239.09822866344604,"y":215.39452495974234},{"parts_id":100,"x":371.0144927536232,"y":215.39452495974234},{"parts_id":100,"x":757.487922705314,"y":253.52657004830917},{"parts_id":100,"x":888.3735909822866,"y":253.52657004830917},{"parts_id":100,"x":760.5797101449275,"y":501.9001610305958},{"parts_id":100,"x":892.4959742351047,"y":501.9001610305958},{"parts_id":2000,"x":923.41384863124,"y":462.7375201288245,"goal_type":"X"},{"parts_id":1000,"x":144.28341384863123,"y":90.69243156199678,"products_type":["A","X","A","X","A","X"]}]';
+	this.stageJSONstrings.push(JSON01);
 	
 	this.load_stageJSON = function(stage_JSON){
 		var stage_data = JSON.parse(stage_JSON);
@@ -78,6 +77,11 @@ function Stage(){
 				putting.addto(this);
 				break;
 
+			case 103:
+				putting = new Conveyor(parts_data.x,parts_data.y);
+				putting.addto(this);
+				break;
+
 				
 			case 200:
 				putting = new Sensor(parts_data.x,parts_data.y);
@@ -104,8 +108,12 @@ function Stage(){
 		
 		}
 	};
-	
+
+	this.load_stageJSON(this.stageJSONstrings[0]);
 };
+
+
+
 
 
 
@@ -412,7 +420,7 @@ var Trapdoor = Class.create(gimicTerrain,{
 		gimicTerrain.call(this,x,y,32*2,32/2);
 		this.image.changeColor('purple');
 		this.disappear = -1;
-		this.parts_id = 102;
+		this.parts_id = 103;
 		
 	},
 	powerOn_event:function(){
@@ -598,15 +606,32 @@ var Player = Class.create(Physical, {
 var Product = Class.create(Physical, {
 	initialize:function(x,y,type){
 		Physical.call(this,x,y,32,32);
-		this.image.changeColor('orange');
-		this.image.drawEdge('black');
+		
 		this.val_rebound = 0.1;
 		this.type = type;
+
+		switch(this.type){
+		case 'A':
+			this.image.changeColor('red');
+			break;
+
+		case 'B':
+			this.image.changeColor('blue');
+			break;
+
+		case 'X':
+			this.image.changeColor('black');
+			break;
+
+		default:
+			this.image.changeColor('orenge');
+		}
+		this.image.drawEdge('black');
 
 		this.parts_id = 0;
 	},
 	goal:function(goal){
-		if(goal.type==this.type) console.log('やったぜ');
+		if(goal.goal_type==this.type) console.log('やったぜ');
 		else console.log('ダメみたいですね');
 	},
 });
@@ -672,17 +697,36 @@ var GoalPoint = Class.create(Terrain,{
 	initialize:function(x,y,type){
 		//受け取った製品のtypeが違ったらペナルティを課す
 		Terrain.call(this,x,y,32*2,32);
-		this.image.changeColor('black');
 		this.goal_type = type;
 		this.parts_id = 2000;
+
+		switch(this.goal_type){
+		case 'A':
+			this.image.changeColor('red');
+			break;
+
+		case 'B':
+			this.image.changeColor('blue');
+			break;
+
+		case 'X':
+			this.image.changeColor('black');
+			break;
+
+		default:
+			this.image.changeColor('orange');
+		}
+		this.image.drawEdge('black');
 	},
 	receive:function(product){
 		console.log('受け取ったつもり type = '+ product.type);
 		if(product.type==this.goal_type){
 			console.log('good!!');
+			product.goal(this);
 			return 1;
 		}else{
 			console.log('poor...');
+			product.goal(this);
 			return -1;
 		}
 	},
@@ -711,7 +755,7 @@ var Trampoline = Class.create(Terrain, {
 		Terrain.call(this,x,y,32*4,16);
 		this.image.changeColor('blue');
 		//field
-		this.extra_rebound = 1;
+		this.extra_rebound = 101;
 		this.parts_id = 1;
 		//event hundler
 		
@@ -735,7 +779,7 @@ var Floor = Class.create(Terrain, {
 		this.image.changeColor('yellow');
 		//field
 		this.color = 'gray';
-		this.parts_id = 0;
+		this.parts_id = 100;
 		//this.image = core.assets['icon1.png'];
 		//event hundler
 		
@@ -754,7 +798,7 @@ var Conveyor = Class.create(Floor, {
 		this.image.changeColor('orange');
 		//field
 		this.speed = 16*4;
-		this.parts_id = 2;
+		this.parts_id = 102;
 		//this.image = core.assets['icon1.png'];
 		//event hundler
 		

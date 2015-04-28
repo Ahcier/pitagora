@@ -8,7 +8,7 @@ window.onload = function(){
 	//===core===
 	var core = new Core(W , H);
 	core.fps = 15;
-	core.rootScene.backgroundColor = 'pink';
+	core.rootScene.backgroundColor = 'aqua';
 	
 	//===grobal var===
 	var TestClass = Class.create(Sprite, {
@@ -31,6 +31,11 @@ window.onload = function(){
 		core.pushScene(ss);
 	};
 
+	var test_scenetitle = function(){
+		var scene_title = new Scene_title(core);
+		core.pushScene(scene_title);
+	}
+	
 	var test_keybind = function(){
 		core.keybind('1'.charCodeAt(0),'keyz');
 		core.keybind('2'.charCodeAt(0),'keyx');
@@ -67,7 +72,8 @@ window.onload = function(){
 		//var testclass = new TestClass(core.rootScene);
 		
 		keybind123();
-		test_scenestage();
+		//test_scenestage();
+		test_scenetitle();
 		
 		
 		//test_keybind();
