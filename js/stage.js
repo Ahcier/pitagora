@@ -108,8 +108,27 @@ function Stage(stage_id){
 		
 		}
 	};
-
+	
 	this.load_stageJSON(this.stageJSONstrings[0]);
+
+	//生産予定のproductsの合計をもとめる
+	this.products_left = 0;
+	for(var i=0;i<this.startpoints.length;i++){
+		var startp = this.startpoints[i];
+		this.products_left += startp.products_type.length;
+	}
+
+	//プレイ結果を記録
+	this.result_game = {
+		all:this.products_left,
+		
+		correct:0,
+		incorrect:0,
+
+		
+		
+		stage_out:0,
+	};
 };
 
 
@@ -238,15 +257,23 @@ var Physical = Class.create(Stage_parts, {
 		
 		this.val_rebound = 0;
 		this.inAir = 0;
+		this.inactive = -1;
+		this.pause = -1;
 		
 		//event hundler
 		this.on('enterframe',function(){
-			this.pre_x = this.x;
-			this.pre_y = this.y;
-			this.v_x += this.a_x/15;//core.fps; 
-			this.v_y += this.a_y/15;///core.fps;
-			this.x += this.v_x/15;//core.fps; 
-			this.y += this.v_y/15;//core.fps; 
+			if(this.inactive>0 || this.pause>0){
+
+				//何もしない
+				
+			}else{
+				this.pre_x = this.x;
+				this.pre_y = this.y;
+				this.v_x += this.a_x/15;//core.fps; 
+				this.v_y += this.a_y/15;///core.fps;
+				this.x += this.v_x/15;//core.fps; 
+				this.y += this.v_y/15;//core.fps;
+			}
 		});
 	},
 	//methods
@@ -275,7 +302,16 @@ var Physical = Class.create(Stage_parts, {
 	},
 	removefrom: function(stage){
 		stage.physical_obj.splice(this.index);
-	}
+	},
+	away: function(){
+		//removefrom関数はterrainとの衝突処理時に使用するとバグる、これは代替の関数
+		//見えなくして、活動停止する
+		this.visible = 0;
+		this.inactive = 1;
+	},
+	toggle_pause: function(){
+		this.pause*=-1;
+	},
 });
 
 
@@ -289,15 +325,31 @@ var Terrain = Class.create(Stage_parts, {
 		this.x = x;
 		this.y = y;
 
+		this.active = 1;
+
 		//event hundler
 		this.on('enterframe',function(){
 			for(var i=0;i<this.stage.physical_obj.length;i++){
 				var obj = this.stage.physical_obj[i];
-				if(this.intersect(obj)){
-					this.image.drawEdge('red');
-					this.touch_onBorder(obj);//<=== 衝突時の処理
+				if(obj.inactive > 0){
+					
+					//何もしない
+					
 				}else{
-					this.image.drawEdge('black');
+					
+					if(this.intersect(obj)){
+						
+						this.image.drawEdge('red');//objがあたっていると光る
+						if(this.active>0){
+							this.touch_onBorder(obj);//<=== 衝突時の処理
+						}
+						
+					}else{
+						
+						this.image.drawEdge('black');
+						
+					}
+					
 				}
 			}
 		});
@@ -331,7 +383,7 @@ var Terrain = Class.create(Stage_parts, {
 		if((obj.x<Xborder_right)&&(obj.x+obj.width>Xborder_left)){//on same COLUMN
 			
 			
-			console.log('on same COLUMN');
+			//console.log('on same COLUMN');
 			if(obj.y<=Yborder_upper){
 				obj.y = Yborder_upper - obj.height/2;//put on UPPER border
 				obj.junping = 0;//reset junping flag
@@ -348,7 +400,7 @@ var Terrain = Class.create(Stage_parts, {
 		else if((obj.y>=Yborder_upper)&&(obj.y<=Yborder_under)){//on same ROW
 			
 			
-			console.log('on same ROW');
+			//console.log('on same ROW');
 			if(obj.x>=Xborder_right){
 				obj.x = Xborder_right;//put on RIGHT border
 				this.conflict_right(obj);
@@ -420,15 +472,17 @@ var Trapdoor = Class.create(gimicTerrain,{
 		gimicTerrain.call(this,x,y,32*2,32/2);
 		this.image.changeColor('purple');
 		this.disappear = -1;
-		this.parts_id = 103;
+		this.parts_id = 102;
 		
 	},
 	powerOn_event:function(){
 		this.disappear*=-1;
 		if(this.disappear>0){	
 			this.opacity = 0.5;
+			this.active = -1;
 		}else{
 			this.opacity = 1;
+			this.active = 1;
 		}
 	},
 });
@@ -604,10 +658,11 @@ var Player = Class.create(Physical, {
 
 
 var Product = Class.create(Physical, {
-	initialize:function(x,y,type){
+	initialize:function(x,y,type,scene){
 		Physical.call(this,x,y,32,32);
 		
 		this.val_rebound = 0.1;
+		this.scene = scene;//このオブジェクトからsceneの関数を呼び出すため
 		this.type = type;
 
 		switch(this.type){
@@ -629,10 +684,35 @@ var Product = Class.create(Physical, {
 		this.image.drawEdge('black');
 
 		this.parts_id = 0;
+
+		//イベントハンドラ
+		this.on('enterframe',function(){
+			if(this.y>1500 && this.inactive<0){
+				this.stage_out();
+			}
+		});
 	},
 	goal:function(goal){
-		if(goal.goal_type==this.type) console.log('やったぜ');
-		else console.log('ダメみたいですね');
+		//のこりproductカウンタを減少
+		this.stage.products_left --;
+		//ゴールとコレとのタイプを比較
+		if(goal.goal_type==this.type){
+			console.log('やったぜ');
+			this.stage.result_game['correct']++;
+		}else{
+			console.log('ダメみたいですね');
+			this.stage.result_game['incorrect']++;
+		};
+		//is.scene.remove_parts(this);
+		//バグったので苦肉の策だが
+		this.away();
+	},
+	stage_out:function(){
+		console.log('stage out');
+		//のこりproductカウンタを減少
+		this.stage.products_left --;
+		this.stage.result_game['stage_out']++;
+		this.away();
 	},
 });
 
@@ -670,9 +750,9 @@ var Startpoint = Class.create(Stage_parts,{
 			}
 		});
 	},
-	stop:function(){
-		console.log('stopしたつもり');
-		this.running = -1;
+	toggle_stop:function(){
+		//console.log('stopしたつもり');
+		this.running *= -1;
 	},
 	addto: function(stage){
 		this.stage = stage;
@@ -720,16 +800,18 @@ var GoalPoint = Class.create(Terrain,{
 	},
 	receive:function(product){
 		console.log('受け取ったつもり type = '+ product.type);
+		console.log(this.stage.products_left);
 		if(product.type==this.goal_type){
 			console.log('good!!');
-			product.goal(this);
+			product.goal(this,this.scene);
 			return 1;
 		}else{
 			console.log('poor...');
-			product.goal(this);
+			product.goal(this,this.scene);
 			return -1;
 		}
 	},
+	//productとの接触時の処理
 	touch_onBorder:function(obj){
 		var is_match = this.receive(obj);
 		return is_match;;
