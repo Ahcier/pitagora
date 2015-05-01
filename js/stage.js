@@ -3,6 +3,21 @@ enchant();
 
 
 
+//********************stage_JSON***************
+
+
+
+var JSON01 =
+	'[{"parts_id":2000,"x":919.2914653784219,"y":218.48631239935588,"goal_type":"A"},{"parts_id":103,"x":107.18196457326891,"y":215.39452495974234},{"parts_id":100,"x":239.09822866344604,"y":215.39452495974234},{"parts_id":100,"x":371.0144927536232,"y":215.39452495974234},{"parts_id":100,"x":757.487922705314,"y":253.52657004830917},{"parts_id":100,"x":888.3735909822866,"y":253.52657004830917},{"parts_id":100,"x":760.5797101449275,"y":501.9001610305958},{"parts_id":100,"x":892.4959742351047,"y":501.9001610305958},{"parts_id":2000,"x":923.41384863124,"y":462.7375201288245,"goal_type":"X"},{"parts_id":1000,"x":144.28341384863123,"y":90.69243156199678,"products_type":["A","X","A","X","A","X"]}]';
+
+
+
+var JSON02 =
+	'[{"parts_id":2000,"x":919.2914653784219,"y":218.48631239935588,"goal_type":"X"},{"parts_id":103,"x":107.18196457326891,"y":215.39452495974234},{"parts_id":100,"x":239.09822866344604,"y":215.39452495974234},{"parts_id":100,"x":371.0144927536232,"y":215.39452495974234},{"parts_id":100,"x":757.487922705314,"y":253.52657004830917},{"parts_id":100,"x":888.3735909822866,"y":253.52657004830917},{"parts_id":100,"x":760.5797101449275,"y":501.9001610305958},{"parts_id":100,"x":892.4959742351047,"y":501.9001610305958},{"parts_id":2000,"x":923.41384863124,"y":462.7375201288245,"goal_type":"A"},{"parts_id":1000,"x":144.28341384863123,"y":90.69243156199678,"products_type":["X","A","X","A","X","A"]}]';
+
+
+
+
 
 //********************Stage********************
 /*
@@ -17,6 +32,7 @@ function Stage(stage_id){
 	
 	//ゲーム用変数
 	this.gravity = 100;
+	this.stage_id = stage_id;
 
 	//構成パーツの保持
 	this.physical_obj = [];
@@ -44,9 +60,9 @@ function Stage(stage_id){
 	//JSON形式の文字列、stageのload_stageJSONで読み込み可能
 	this.stageJSONstrings = [];
 
-	var JSON01 =
-		'[{"parts_id":2000,"x":919.2914653784219,"y":218.48631239935588,"goal_type":"A"},{"parts_id":103,"x":107.18196457326891,"y":215.39452495974234},{"parts_id":100,"x":239.09822866344604,"y":215.39452495974234},{"parts_id":100,"x":371.0144927536232,"y":215.39452495974234},{"parts_id":100,"x":757.487922705314,"y":253.52657004830917},{"parts_id":100,"x":888.3735909822866,"y":253.52657004830917},{"parts_id":100,"x":760.5797101449275,"y":501.9001610305958},{"parts_id":100,"x":892.4959742351047,"y":501.9001610305958},{"parts_id":2000,"x":923.41384863124,"y":462.7375201288245,"goal_type":"X"},{"parts_id":1000,"x":144.28341384863123,"y":90.69243156199678,"products_type":["A","X","A","X","A","X"]}]';
+
 	this.stageJSONstrings.push(JSON01);
+	this.stageJSONstrings.push(JSON02);
 	
 	this.load_stageJSON = function(stage_JSON){
 		var stage_data = JSON.parse(stage_JSON);
@@ -79,6 +95,9 @@ function Stage(stage_id){
 
 			case 103:
 				putting = new Conveyor(parts_data.x,parts_data.y);
+				if(parts_data.speed!=null){
+					putting.speed = parts_data.speed;
+				}
 				putting.addto(this);
 				break;
 
@@ -94,8 +113,13 @@ function Stage(stage_id){
 				break;
 
 			case 1000:
-				putting = new Startpoint(parts_data.x,parts_data.y,3);
-				putting.products_type = parts_data.products_type;
+				putting = new Startpoint(
+					parts_data.x,
+					parts_data.y,
+					3,
+					parts_data.products_type
+				);
+				//putting.products_type = parts_data.products_type;
 				putting.addto(this);
 				break;
 
@@ -109,7 +133,7 @@ function Stage(stage_id){
 		}
 	};
 	
-	this.load_stageJSON(this.stageJSONstrings[0]);
+	this.load_stageJSON(this.stageJSONstrings[stage_id]);
 
 	//生産予定のproductsの合計をもとめる
 	this.products_left = 0;
@@ -125,9 +149,15 @@ function Stage(stage_id){
 		correct:0,
 		incorrect:0,
 
-		
+		delivered_product:0,
+		delivered_X:0,
+
+		thrown_product:0,
+		thrown_X:0,
 		
 		stage_out:0,
+		stage_out_product:0,
+		stage_out_X:0,
 	};
 };
 
@@ -169,6 +199,13 @@ var Surface0 = Class.create(Surface,{
 		this.context.moveTo(begin_x,begin_y);
 		this.context.lineTo(end_x,end_y);
 		this.context.strokeStyle = color;
+		this.context.closePath();
+		this.context.stroke();
+	},
+	drawRect: function(begin_x,begin_y,end_x,end_y){
+		this.context.beginPath();
+		this.context.moveTo(begin_x,begin_y);
+		this.context.lineTo(end_x,end_y);
 		this.context.closePath();
 		this.context.stroke();
 	},
@@ -312,6 +349,10 @@ var Physical = Class.create(Stage_parts, {
 	toggle_pause: function(){
 		this.pause*=-1;
 	},
+	move_street:function(end_x,end_y){
+		var speed = 128;
+		
+	},
 });
 
 
@@ -433,11 +474,21 @@ var gimicTerrain = Class.create(Terrain,{
 		//call super constructor
 		Terrain.call(this,x,y,width,height,stage);
 		this.power = -1;
+		this.wires = [];
 		//event hundler
 		this.on('enterframe',function(){
 			if(this.power>0){
 				this.running();
 			}
+			for(var i=0;i<this.wires.length;i++){
+				if(this.wires[i].transmitting>0){
+					//console.log('on');
+					this.powerOn();
+					return;
+				}
+			}
+			//console.log('off');
+			this.powerOff();
 		});
 	},
 	powerOn:function(){
@@ -462,6 +513,10 @@ var gimicTerrain = Class.create(Terrain,{
 	
 	running:function(){
 	},
+	
+	connect_wire:function(wire){
+		this.wires.push(wire);
+	}
 });
 
 
@@ -490,6 +545,7 @@ var Trapdoor = Class.create(gimicTerrain,{
 
 
 var Sensor = Class.create(Stage_parts,{
+	
 	initialize:function(x,y){
 		Stage_parts.call(this,16,16);
 		this.x = x;
@@ -516,6 +572,7 @@ var Sensor = Class.create(Stage_parts,{
 			this.image.drawEdge('black');
 		}
 	},
+	
 	connectWire:function(dist){
 		console.log('generate new wire...');
 		var wire = new Wire(this,dist);
@@ -551,6 +608,7 @@ var Wire = Class.create(Stage_parts,{
 		//console.log('wire: initialized');
 
 		this.dist = dist;
+		this.dist.connect_wire(this);
 		this.source = source;
 		this.source_x = source.getCenter()[0];
 		this.source_y = source.getCenter()[1];
@@ -560,6 +618,10 @@ var Wire = Class.create(Stage_parts,{
 						 Math.abs(this.dist_x-this.source_x),
 						 Math.abs(this.dist_y-this.source_y)
 						);
+		this.transmitting = -1;//gimicが参照する変数
+
+		this.parts_id = 300;
+		
 		//めんどくさいがwireの大きさが正のままで成立する位置に移動する
 		var _x = this.dist_x - this.source_x;
 		var _y = this.dist_y - this.source_y;
@@ -578,17 +640,17 @@ var Wire = Class.create(Stage_parts,{
 		}
 		
 		this.drawWire('black');
-
-		this.parts_id = 300;
 	},
 	transmit:function(value){
 		//console.log('wire: transmit');
 		if(value>0){
 			this.drawWire('yellow');
-			this.dist.powerOn();
+			//this.dist.powerOn();
+			this.transmitting = 1;
 		}else{
 			this.drawWire('black');
-			this.dist.powerOff();
+			//this.dist.powerOff();
+			this.transmitting = -1;
 		}
 	},
 	drawWire:function(color){
@@ -659,31 +721,35 @@ var Player = Class.create(Physical, {
 
 var Product = Class.create(Physical, {
 	initialize:function(x,y,type,scene){
-		Physical.call(this,x,y,32,32);
+		Physical.call(this,x,y,32*2,32*2);
 		
 		this.val_rebound = 0.1;
 		this.scene = scene;//このオブジェクトからsceneの関数を呼び出すため
 		this.type = type;
 
-		switch(this.type){
-		case 'A':
-			this.image.changeColor('red');
-			break;
-
-		case 'B':
-			this.image.changeColor('blue');
-			break;
-
-		case 'X':
-			this.image.changeColor('black');
-			break;
-
-		default:
-			this.image.changeColor('orenge');
-		}
-		this.image.drawEdge('black');
-
 		this.parts_id = 0;
+
+		//見た目の設定はscene_stage.make_product()に任せた
+		/*
+		  switch(this.type){
+		  case 'A':
+		  this.image.changeColor('red');
+		  this.image.draw('img/product_a.jpg');
+		  break;
+
+		  case 'B':
+		  this.image.changeColor('blue');
+		  break;
+
+		  case 'X':
+		  this.image.changeColor('black');
+		  break;
+
+		  default:
+		  this.image.changeColor('orenge');
+		  }
+		  this.image.drawEdge('black');
+		*/
 
 		//イベントハンドラ
 		this.on('enterframe',function(){
@@ -697,11 +763,28 @@ var Product = Class.create(Physical, {
 		this.stage.products_left --;
 		//ゴールとコレとのタイプを比較
 		if(goal.goal_type==this.type){
-			console.log('やったぜ');
+			//console.log('やったぜ');
 			this.stage.result_game['correct']++;
+			//どのように成功したか
+			//product = ペヤングorサムシング,goal = 出荷or廃棄
+			if(goal.goal_type == 'A' && this.type == 'A'){
+				//出荷したペヤングの数を加算
+				this.stage.result_game['delivered_product']++;
+			}else if(goal.goal_type == 'X' && this.type == 'X'){
+				//廃棄した異物の数を加算
+				this.stage.result_game['thrown_X']++;
+			}
 		}else{
-			console.log('ダメみたいですね');
+			//console.log('ダメみたいですね');
 			this.stage.result_game['incorrect']++;
+			//どのように失敗したか
+			if(goal.goal_type == 'X' && this.type == 'A'){
+				//廃棄したペヤングの数を加算
+				this.stage.result_game['thrown_product']++;
+			}else if(goal.goal_type == 'A' && this.type == 'X'){
+				//廃棄したペヤングの数を加算
+				this.stage.result_game['delivered_X']++;
+			}
 		};
 		//is.scene.remove_parts(this);
 		//バグったので苦肉の策だが
@@ -712,6 +795,13 @@ var Product = Class.create(Physical, {
 		//のこりproductカウンタを減少
 		this.stage.products_left --;
 		this.stage.result_game['stage_out']++;
+		if(this.type == 'A'){
+			//コースアウトしたペヤングの数を加算
+			this.stage.result_game['stage_out_product']++;
+		}else if(this.type == 'X'){
+			//コースアウトしたXの数を加算
+			this.stage.result_game['stage_out_X']++;
+		}
 		this.away();
 	},
 });
@@ -719,21 +809,34 @@ var Product = Class.create(Physical, {
 
 
 var Startpoint = Class.create(Stage_parts,{
-	initialize:function(x,y,span_sec){
+	initialize:function(x,y,span_sec,products_type){
 		Stage_parts.call(this,32*2,32);
+		//基本設定
 		this.x = x;
 		this.y = y;
 		this.fps = 15;
 		this.image.changeColor('white');
 		this.image.drawEdge('black');
+		this.parts_id = 1000;
+
+		//特殊設定
 		this.span_frame = span_sec * this.fps;
 
-		this.products_type = ['A','A','A','A','A','A'];
+		this.products_type = products_type;//['A','A','A','A','A','A'];
 		this.pointer = 0;
 
-		this.running = -1;
+		//出現する製品を予告するラベル
+		this.label_products = new Label('');
+		for(var i=0;i<this.products_type.length;i++){
+			this.label_products.text += this.products_type[i];
+		}
+		this.label_products.x = this.x;
+		this.label_products.y = this.y - 25;
+		this.label_products.color = 'white'
+		this.label_products.font = '24px Platino'
+		
 
-		this.parts_id = 1000;
+		this.running = -1;		
 	},
 	run:function(scene){
 		this.running = 1;
@@ -742,10 +845,15 @@ var Startpoint = Class.create(Stage_parts,{
 			if(this.running>0&&this.pointer<this.products_type.length){
 				if(this.age%this.span_frame==0){
 					var typelist = this.products_type;
-					console.log('ブロックを作ったつもり : '+this.age);
+					//console.log('ブロックを作ったつもり : '+this.age);
 					scene.make_product(this.x,this.y
 									   ,typelist[this.pointer]);
-					this.pointer++;
+					this.pointer++
+					//ラベルの更新
+					this.label_products.text = '';
+					for(var i=this.pointer;i<this.products_type.length;i++){
+						this.label_products.text += this.products_type[i];
+					}
 				}
 			}
 		});
@@ -776,7 +884,7 @@ var Startpoint = Class.create(Stage_parts,{
 var GoalPoint = Class.create(Terrain,{
 	initialize:function(x,y,type){
 		//受け取った製品のtypeが違ったらペナルティを課す
-		Terrain.call(this,x,y,32*2,32);
+		Terrain.call(this,x,y,32*4,32*2);
 		this.goal_type = type;
 		this.parts_id = 2000;
 
@@ -799,8 +907,8 @@ var GoalPoint = Class.create(Terrain,{
 		this.image.drawEdge('black');
 	},
 	receive:function(product){
-		console.log('受け取ったつもり type = '+ product.type);
-		console.log(this.stage.products_left);
+		//console.log('受け取ったつもり type = '+ product.type);
+		//console.log(this.stage.products_left);
 		if(product.type==this.goal_type){
 			console.log('good!!');
 			product.goal(this,this.scene);
@@ -826,6 +934,11 @@ var GoalPoint = Class.create(Terrain,{
 		};
 		return info;
 	},
+	addto: function(stage){
+		this.stage = stage;
+		stage.goalpoints.push(this);
+		this.index = stage.goalpoints.length-1;
+	},
 });
 
 
@@ -837,8 +950,8 @@ var Trampoline = Class.create(Terrain, {
 		Terrain.call(this,x,y,32*4,16);
 		this.image.changeColor('blue');
 		//field
-		this.extra_rebound = 101;
-		this.parts_id = 1;
+		this.extra_rebound = 1;
+		this.parts_id = 101;
 		//event hundler
 		
 	},
@@ -874,16 +987,17 @@ var Floor = Class.create(Terrain, {
 var Conveyor = Class.create(Floor, {
 	//constructor
 	initialize:function(x,y){
-		console.log('I am Conveyor');
 		//call super constructor
 		Floor.call(this,x,y);
 		this.image.changeColor('orange');
 		//field
 		this.speed = 16*4;
 		this.parts_id = 102;
-		//this.image = core.assets['icon1.png'];
 		//event hundler
-		
+		this.on('enterframe',function(){
+			var age = this.age;
+			this.animation(age);
+		});
 	},
 	//methods
 	conflict_upper:function(obj){
@@ -891,6 +1005,13 @@ var Conveyor = Class.create(Floor, {
 		obj.v_y = 0;
 		obj.v_x = this.speed;
 	},
+	animation:function(age){
+		this.image.changeColor('orange');
+		var x = this.speed*age/15%this.width;
+		if(x<0) x = x+this.width;
+		this.image.context.fillRect(x,this.y,10,this.height);
+		this.image.drawLine(x,0,x,this.height);
+	}
 });
 
 

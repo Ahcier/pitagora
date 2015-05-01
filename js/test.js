@@ -3,12 +3,18 @@ enchant();
 var W = 320*2*2;
 var H = 320*2;
 
+var image_URL = ['img/product_a.jpg','img/product_x.jpg','img/goal_a.jpg','img/goal_x.jpg','img/scene_title.jpg','img/scene_result.jpg','img/scene_stage.jpg'];
+
 window.onload = function(){
 
 	//===core===
 	var core = new Core(W , H);
 	core.fps = 15;
 	core.rootScene.backgroundColor = 'aqua';
+	//‰æ‘œ‚Ì“Ç‚İ‚İ
+	for(var i = 0;i<image_URL.length;i++){
+		core.preload(image_URL[i]);
+	}
 	
 	//===grobal var===
 	var TestClass = Class.create(Sprite, {
@@ -36,6 +42,15 @@ window.onload = function(){
 		core.pushScene(scene_title);
 	}
 	
+	var test_surfaceimage = function(){
+		//–³–‚É•\¦‰Â”\
+		var sprite = new Sprite2(200,200);
+		sprite.x = core.width/2;
+		sprite.image.changeColor('red');
+		sprite.image.draw(core.assets[image_URL[0]],0,0,sprite.width,sprite.height);
+		core.rootScene.addChild(sprite);
+	}
+	
 	var test_keybind = function(){
 		core.keybind('1'.charCodeAt(0),'keyz');
 		core.keybind('2'.charCodeAt(0),'keyx');
@@ -58,7 +73,6 @@ window.onload = function(){
 		core.keybind('3'.charCodeAt(0),'keyc');
 		core.keybind('0'.charCodeAt(0),'key0');
 	};
-		
 	
 	core.onload = function(){
 		//===scenes add===
@@ -74,7 +88,7 @@ window.onload = function(){
 		keybind123();
 		//test_scenestage();
 		test_scenetitle();
-		
+		//test_surfaceimage();
 		
 		//test_keybind();
 	};
