@@ -11,7 +11,7 @@ window.onload = function(){
 	var core = new Core(W , H);
 	core.fps = 15;
 	core.rootScene.backgroundColor = 'aqua';
-	//‰æ‘œ‚Ì“Ç‚İ‚İ
+	//ç”»åƒã®èª­ã¿è¾¼ã¿
 	for(var i = 0;i<image_URL.length;i++){
 		core.preload(image_URL[i]);
 	}
@@ -43,7 +43,7 @@ window.onload = function(){
 	}
 	
 	var test_surfaceimage = function(){
-		//–³–‚É•\¦‰Â”\
+		//ç„¡äº‹ã«è¡¨ç¤ºå¯èƒ½
 		var sprite = new Sprite2(200,200);
 		sprite.x = core.width/2;
 		sprite.image.changeColor('red');
@@ -102,7 +102,7 @@ window.onload = function(){
 			stage_out_product:0,
 			stage_out_X:0,
 		};
-		var stage_scene = null;//new Scene_stage(core,null);
+		var stage_scene = null;
 		var scene_result = new Scene_result(core,stage_scene,result);
 		core.pushScene(scene_result);
 	};

@@ -152,6 +152,15 @@ var Scene_result = Class.create(Scene,{
 		this.stage_scene = stage_scene;
 		this.result = result;
 
+		
+		//最上の結果を出すと次のステージを出現させる
+		if(this.result['correct']==this.result['all']){
+			CLEAR_STAGE_NUM++;
+		}else{
+			
+		}
+
+		
 		//背景の画像の設定
 		this.back_image = new Sprite2(this.core.width,this.core.height);
 		this.back_image.image.draw(
@@ -168,18 +177,13 @@ var Scene_result = Class.create(Scene,{
 		var res_x = 20;
 		var res_y = this.height*(1/8);
 		this.add_result(res_x,res_y);
-		//console.dir(result);
-		/*
-		  this.label_result = new Label(
-		  result['all']+'\n'+
-		  result['correct']+'\n'+
-		  result['incorrect']+'\n'+
-		  result['stage_out']+'\n'
-		  );
-		*/
-		//それはもう、resultを評価してresultシーンを分岐したいものですよね
-		
 
+		
+		//commentの追加
+		var comm_x = 20;
+		var comm_y = this.height*(1/2);
+		this.add_comment(comm_x,comm_y,result);
+		
 		//ボタンの追加
 		var b_W = this.width/10,b_H = this.height/20; 
 		var b_retry = new Button_retryStage(this,b_W,b_H);
@@ -201,6 +205,9 @@ var Scene_result = Class.create(Scene,{
 		this.core.popScene();
 	},
 	add_result:function(x,y){
+
+		
+		//リザルト内容テキスト
 		var text_result =
 			'あなたの工場のペヤング生産ラインで,<br>'
 			+' <br>'
@@ -213,24 +220,51 @@ var Scene_result = Class.create(Scene,{
 			+' <br>'
 		+'でした<br>'
 		;
-		var comment = '';
+		//リザルト表示ラベル
 		var label_result = new Label(text_result);
 		label_result.font = '16px Platino';
 		label_result.x = x;
 		label_result.y = y;
 		this.addChild(label_result);
-
+		
 		console.dir(this.result);
 		console.log('ただしい'+this.result['correct']);
-		console.log('全製品' +this.result['all']);
-		//最上の結果を出すと次のステージを出現させる
-		if(this.result['correct']==this.result['all']){
-			CLEAR_STAGE_NUM++;
-		}else{
-			
-		}
-	}
-});
+		console.log('全製品 ' +this.result['all']);
+	},
+		
+	add_comment:function(x,y,result){
+		var this_scene = this;
+
+		//講評内容テキスト
+		var text_comment = '';
+		//ウィキペディア非同期通信
+		var wikirand = new Wikirand();
+		wikirand.
+			ajax_rand_titles
+			.then(function(titles){
+				//混入した恐れのあるXの数だけ混入通知を追加
+				var X_num = result.delivered_X;
+				console.log(titles);
+				for(var i=0;i<X_num;i++){
+					if(X_num<10){
+						text_comment += 'あなたのペヤングに '+ titles[i]+' が混入していたとクレームがありました<br>' + ' <br>';
+					}else{
+						//ランダムは10こしか用意していないので,それ以上使おうとしたら何もしない
+					}
+				}
+			})
+			.then(function(){
+				//講評ラベル
+				var label_comment = new Label(text_comment);
+				label_comment.font = '16px Platino';
+				label_comment.x = x;
+				label_comment.y = y;
+				label_comment.color = 'red';
+				label_comment.width = 300;
+				this_scene.addChild(label_comment);
+			});
+	},
+	});
 
 
 
