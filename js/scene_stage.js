@@ -247,7 +247,7 @@ var Scene_result = Class.create(Scene,{
 				console.log(titles);
 				for(var i=0;i<X_num;i++){
 					if(X_num<10){
-						text_comment += 'あなたのペヤングに '+ titles[i]+' が混入していたとクレームがありました<br>' + ' <br>';
+						text_comment += 'あなたのペヤングに 「'+ titles[i]+'」 が混入していたとクレームがありました<br>' + ' <br>';
 					}else{
 						//ランダムは10こしか用意していないので,それ以上使おうとしたら何もしない
 					}
@@ -475,6 +475,10 @@ var Scene_stage = Class.create(Scene,{
 		for(var l=0;l<this.stage.startpoints.length;l++){
 			snapshot.push(this.stage.startpoints[l].getInfo());
 		}
+
+		for(var l=0;l<this.stage.goalpoints.length;l++){
+			snapshot.push(this.stage.goalpoints[l].getInfo());
+		}
 		var snapshot_JSON = JSON.stringify(snapshot);
 		//return snapshot;
 		return snapshot_JSON;
@@ -509,13 +513,7 @@ var Scene_stage = Class.create(Scene,{
 		
 		this.on('key0buttondown',function(){
 			console.log('key0 test:down');
-			//var stage_json = '[{"parts_id":100,"x":87.60064412238324,"y":298.8727858293076},{"parts_id":100,"x":217.45571658615137,"y":298.8727858293076},{"parts_id":100,"x":347.3107890499195,"y":298.8727858293076}]';
-			//this.stage.load_stageJSON(stage_json);
-			//this.loadStageData(this.stage);
-
 			console.log(this.snapshot());
-			
-			//JSON.stringify(this.stage);使えねえ野郎だ
 		});
 	},
 	

@@ -102,7 +102,7 @@ window.onload = function(){
 			stage_out_product:0,
 			stage_out_X:0,
 		};
-		var stage_scene = null;//new Scene_stage(core,null);
+		var stage_scene = null;
 		var scene_result = new Scene_result(core,stage_scene,result);
 		core.pushScene(scene_result);
 	};
@@ -110,9 +110,9 @@ window.onload = function(){
 	core.onload = function(){
 		//===scenes add===
 		//test_wikirand();
-		test_sceneresult();
-		//keybind123();
-		//test_scenetitle();
+		//test_sceneresult();
+		keybind123();
+		test_scenetitle();
 	};
 
 	core.start();
