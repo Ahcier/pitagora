@@ -4,6 +4,7 @@ var W = 320*2*2;
 var H = 320*2;
 
 var image_URL = ['img/product_a.jpg','img/product_x.jpg','img/goal_a.jpg','img/goal_x.jpg','img/scene_title.jpg','img/scene_result.jpg','img/scene_stage.jpg'];
+var se_URL = ['se/ta_ta_pi03.mp3','bgm/muci_bara_r02.mp3'];
 
 window.onload = function(){
 
@@ -14,6 +15,10 @@ window.onload = function(){
 	//‰æ‘œ‚Ì“Ç‚İ‚İ
 	for(var i = 0;i<image_URL.length;i++){
 		core.preload(image_URL[i]);
+	}
+	//‰¹º‚Ì“Ç‚İ‚İ
+	for(var i = 0;i<se_URL.length;i++){
+		core.preload(se_URL[i]);
 	}
 	
 	//===grobal var===

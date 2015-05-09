@@ -5,7 +5,7 @@ enchant();
 
 //クリアしたステージを記録するグローバル変数
 var CLEAR_STAGE_NUM = 0;
-var ALL_STAGE_NUM = 2;
+var ALL_STAGE_NUM = 5;//ステージを追加するごとに手動で変更すること(怒)
 
 
 
@@ -34,8 +34,12 @@ var UI_button = Class.create(Sprite2,{
 		this.label.font = '32px Platino';
 		//ボタンに色つけるだけの装飾パネル
 		this.decolation_sprite = new Sprite2(this.width,this.height);
+
+		this.se = null;//SE、Scene内にオブジェクト生成した後に設定してくれ
 		
 		this.on('touchstart',function(){
+			//SEの再生
+			this.play_se();
 			this.pushed();
 		});
 	},
@@ -62,7 +66,12 @@ var UI_button = Class.create(Sprite2,{
 		scene.addChild(this.label);//ラベルを敷いて...
 		scene.addChild(this);//最後に透明なボタンをかぶせる
 	},
-	
+	play_se:function(){
+		if(this.se!=null){
+			var se = this.se.clone();
+			se.play();
+		}
+	}
 });
 
 
@@ -81,9 +90,11 @@ var UI_button = Class.create(Sprite2,{
 var Scene_title = Class.create(Scene,{
 	initialize:function(core){
 		Scene.call(this);
+		//基本の設定
 		this.core = core;
 		this.backgroundColor = 'blue';
-
+		
+		//背景の設定
 		this.back_image = new Sprite2(this.core.width,this.core.height);
 		this.back_image.image.draw(
 			this.core.assets['img/scene_title.jpg'],
@@ -91,6 +102,11 @@ var Scene_title = Class.create(Scene,{
 			this.back_image.width,this.back_image.height);
 		this.addChild(this.back_image);
 
+		//BGMを設定
+		this.bgm = this.core.assets['bgm/muci_bara_r02.mp3'];
+		this.loop_bgm();
+		
+		//イベントハンドラ
 		this.on('enter',function(){
 			console.log('scene enter');
 			//全クリしてなければ
@@ -104,6 +120,7 @@ var Scene_title = Class.create(Scene,{
 						this.width*(8/10) - b_stageSelect.width/2,
 						this.height * (1/10) + i*(b_H + space),
 						'white','stage '+i,this);
+					b_stageSelect.se = this.core.assets['se/ta_ta_pi03.mp3'];
 				}
 			}
 		});
@@ -114,6 +131,16 @@ var Scene_title = Class.create(Scene,{
 		var scene_stage = new Scene_stage(this.core,stage);
 		this.core.pushScene(scene_stage);
 	},
+	loop_bgm:function(){
+		console.log('loop_bgm');
+		var bgm = this.bgm.clone();
+		bgm.play(true);
+		var delay_ms =  bgm.duration * 1000 + 100;
+		var a = this;
+		window.setTimeout(
+			function(){a.loop_bgm();}
+			,delay_ms);
+	}
 });
 
 
@@ -324,7 +351,7 @@ var Scene_stage = Class.create(Scene,{
 		//背景の画像の設定
 		this.back_image = new Sprite2(this.core.width,this.core.height);
 		this.back_image.image.draw(
-			this.core.assets['img/scene_result.jpg'],
+			this.core.assets['img/scene_stage.jpg'],
 			0,0,
 			this.back_image.width,this.back_image.height);
 		
@@ -607,11 +634,12 @@ var Stageview = Class.create(Sprite2,{
 				break;
 				
 			case 5:
-				putting = new Startpoint(e.x,e.y,2);
+				var products_type = ["X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"];
+				putting = new Startpoint(e.x,e.y,2,products_type);
 				break;
 				
 			case 6:
-				putting = new GoalPoint(e.x,e.y,'xp');
+				putting = new GoalPoint(e.x,e.y,'X');
 				break;
 				
 			default:
